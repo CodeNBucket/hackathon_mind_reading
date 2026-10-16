@@ -1,0 +1,11 @@
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Downloaded model weights (re-downloaded automatically on first run)
+models/
+
+# Large raw datasets (EEG downloads etc.) - keep them local, not in git
+/data_raw/
