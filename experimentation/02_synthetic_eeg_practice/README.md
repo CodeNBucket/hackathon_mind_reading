@@ -19,6 +19,7 @@ py -3.11 -m venv .venv
 .venv\Scripts\python.exe make_sample_data.py      # 1. builds eeg_epochs.npy and the csv/json files
 .venv\Scripts\python.exe walkthrough.py           # 2. looks at the data, saves 3 figures, simple decoder
 .venv\Scripts\python.exe end_to_end_example.py    # 3. the full EEG -> video-vector -> pick-a-video pipeline
+.venv\Scripts\python.exe pca_sweep.py            # 4. how the number of PCA components changes accuracy
 ```
 
 (On Mac/Linux use `python3.11 -m venv .venv` and `.venv/bin/python`.)
@@ -34,5 +35,7 @@ py -3.11 -m venv .venv
   5. Cosine similarity to all 20 candidate videos, and the closest one is the answer.
 
   Result on an unseen subject: 34% top-1 and 85% top-5 averaged over subjects (sub-04: 20% / 65%). Chance is 5% and 25%.
+
+- `pca_sweep.py`: the same pipeline for many PCA sizes. On this fake data, 40 components give 34% top-1, 150 give 89%, and no PCA (all 650) gives 78%. Too few throws away signal, too many lets noise in.
 
 Results above were checked on Python 3.11 with the versions in `requirements.txt`.
