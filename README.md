@@ -5,7 +5,6 @@ Identify which 3-second video a person watched from their EEG. Hackathon project
 ## Layout
 
 - `PROJECT_PLAN.md`: **start here.** The master plan: Person 1 (EEG) and Person 2 (video + evaluation), phases, tasks and checklists.
-- `INSIGHTS.md`: where cognitive psychology goes in, and the brain vs AI analyses for the judges.
 - `eeg/PLAN.md`: the EEG side's 3 steps from PCA to advanced, all with the same output format.
 - `BRIEF.md`: the official hackathon brief and how each part maps to our plan.
 - `experimentation/`: small, self-contained experiments to learn how the pieces work. Each experiment has its own README, `requirements.txt` and `run.py`.

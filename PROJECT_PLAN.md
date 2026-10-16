@@ -3,7 +3,6 @@
 This is the master plan to follow day by day. The other docs go deeper on one part each:
 - `BRIEF.md`: the official task
 - `eeg/PLAN.md`: Person 1's three models in detail
-- `INSIGHTS.md`: the psychology and brain-vs-AI analyses
 
 The hackathon lasts 48 hours, so the phase times below are rough guides in hours after the data arrives.
 
@@ -50,7 +49,7 @@ When the organisers' template scripts arrive, their data loading and submission 
 ## 3. Repo layout (target)
 
 ```
-BRIEF.md  PROJECT_PLAN.md  INSIGHTS.md  README.md
+BRIEF.md  PROJECT_PLAN.md  README.md
 eeg/                Person 1
   PLAN.md
   data.py           load + clean EEG (uses organiser template)
@@ -99,7 +98,7 @@ Tick the boxes as you go. "Done when" is the check that a task is finished.
 - [ ] Test V-JEPA 2 (`facebook/vjepa2-vitl-fpc64-256`) on one clip with a GPU (CUDA build of torch). Note memory use and seconds per clip, so phase 2 has no surprises.
 
 **Together**
-- [ ] Agree the contract table above. Both read `BRIEF.md` and `INSIGHTS.md`.
+- [ ] Agree the contract table above. Both read `BRIEF.md`.
 
 ### Phase 1: data arrives (≈ hours 0–8)
 
@@ -123,7 +122,7 @@ Tick the boxes as you go. "Done when" is the check that a task is finished.
 **Person 1**
 - [ ] Step 2: PCA + MLP + contrastive loss.
 - [ ] Step 3: EEGNet-style network + contrastive loss (braindecode / PyTorch). Use augmentation and early stopping.
-- [ ] Psychology-based feature variants (`INSIGHTS.md` part 1): visual electrodes only, time windows around P1/N1, N170, P300, alpha power.
+- [ ] Psychology-based feature variants (from what's known about vision): visual electrodes only, time windows around P1/N1, N170, P300, alpha power.
 - [ ] Calibration plan for the 2 partially-held-out test subjects (re-center/re-scale, fine-tune the last layer).
 - [ ] Fill the results table for every step and variant.
   *Done when:* each row has scores for all 4 held-out subjects plus the shuffled control.
