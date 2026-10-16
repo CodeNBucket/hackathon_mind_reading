@@ -2,7 +2,7 @@
 
 Fake EEG data shaped like the real challenge, so we can build and test the EEG side before the organizers' data arrives. **Everything here is synthetic.** The numbers say nothing about real brains.
 
-`CHALLENGE_BRIEF_mock.md` is an imagined version of the brief the organizers might send.
+`CHALLENGE_BRIEF_mock.md` is an imagined guess at the data format, written before we had the brief. The official text is in `BRIEF.md` at the repo root.
 
 ## What the fake dataset looks like
 
