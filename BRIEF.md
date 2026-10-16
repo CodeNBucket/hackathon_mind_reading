@@ -13,6 +13,7 @@ Task: given one EEG recording and a set of candidate videos, **rank the candidat
 | `stimuli_train/` | 1,000 videos `0001.mp4`…`1000.mp4`, **with sound** |
 | `stimuli_test/` | 102 videos `1001.mp4`…`1102.mp4`, with sound. **All subjects saw the same 102.** No training video is in the test set. |
 | `trn/subXX_trn.npz` | dict: key = training video id **without leading zeros** (`"35"` = `0035.mp4`), value = array `17 × 1500`. **850–972 recordings per subject, one per video** (so no repetitions to average). Provided for all 6 subjects, labels included. |
+| Verified recordings per subject | sub-01 968, sub-02 972, sub-03 961, sub-04 947, sub-05 952, sub-06 850. **695 training videos were recorded for all six subjects.** |
 | `tst/subXX_tst.npy` | array `102 × 17 × 1500`, one recording per test video, **in shuffled order** |
 | `tst_stim/subXX_tst_stim.npy` | the true video ids (1001–1102) in the same order as `tst`. **Only for `sub-01`…`sub-04`.** |
 | Local copy | `C:\Users\canbe\Desktop\eeg-mind-reading-challenge\eeg-mind-reading-challenge` (never committed) |
@@ -57,6 +58,5 @@ Task: given one EEG recording and a set of candidate videos, **rank the candidat
 ## Still unknown (ask the organizers or check the data)
 
 - Which 17 channels these are (names / positions).
-- Whether the training folder has recordings for every training video across subjects or only subsets, and how much the subjects overlap.
 - The exact deadline for the submission on the 18th, and **which GitHub repository is the "designated" one** (is it `CodeNBucket/hackathon_mind_reading`?).
 - The hyperparameter-selection question in rule 6.
