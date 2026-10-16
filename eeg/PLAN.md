@@ -15,6 +15,8 @@ Every step produces exactly the same kind of file, so `visual/evaluate.py` score
 - `shared/predictions/<step>_<heldout-subject>.npy`, shape **(number of trials, 512)**, each row normalised to length 1
 - `shared/predictions/<step>_<heldout-subject>.csv`, one row per trial: `subject, trial, true_video_id`
 
+Every step also saves its trained weights to `eeg/weights/<step>.*` (`.npz` for step 1, `.pt` for steps 2–3). Sharing weights is required by the organizers.
+
 The 512 comes from the video vectors (CLIP ViT-B/32, see `WORK_SPLIT.md`). If the video person switches the video model, for example to VideoMAE with 768 numbers, all three steps switch with it. Only the last layer changes.
 
 ## Shared by all three
@@ -32,6 +34,9 @@ The 512 comes from the video vectors (CLIP ViT-B/32, see `WORK_SPLIT.md`). If th
 **Sanity checks, every run**
 - *Perfect brain:* evaluating the true video vectors must give 100%.
 - *Shuffled control:* train with the trial → video labels shuffled; the score must drop to chance (5% / 25% with 20 videos). If it doesn't, something leaks.
+
+**The 2 partially-held-out test subjects**
+- If we get a little data from them, use it to calibrate: re-center and re-scale their EEG with it (all steps), or fine-tune only the last layer on it (steps 2–3).
 
 ## Step 1: PCA + ridge (baseline, about 1 hour)
 
@@ -62,3 +67,6 @@ The 512 comes from the video vectors (CLIP ViT-B/32, see `WORK_SPLIT.md`). If th
 | 1. PCA + ridge | | | | | | | |
 | 2. PCA + MLP contrastive | | | | | | | |
 | 3. EEGNet contrastive | | | | | | | |
+| Ensemble (average the steps' scores) | | | | | | | |
+
+The final submission is whichever row wins on unseen subjects.
