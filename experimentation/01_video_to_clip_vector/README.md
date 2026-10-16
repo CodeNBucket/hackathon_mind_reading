@@ -36,6 +36,18 @@ Options: `--video other.mp4 --start 5 --seconds 3 --skip-videomae`
   - `videomae_vector.npy`: 768 numbers
 - `.venv/`: the Python 3.11 environment. Don't edit it, and don't share it; rebuild it from `requirements.txt` instead.
 
+## Reading the result
+
+- `clip_model.video_vector` (512 numbers) is the actual output: the clip's position in CLIP's "meaning space". Similar pictures land close together.
+- `text_match` checks that position: on the dog clip, "a dog running" wins with 99.6%.
+- Everything else (frame indices, shapes, timings, VideoMAE) is bookkeeping or comparison.
+
+## How this connects to EEG
+
+1. In THINGS-EEG, each training image has an EEG response (17 channels × 100 time points). We compute the image's CLIP vector with this code. That gives pairs of EEG → 512 numbers.
+2. We train a small model, starting with a linear regression, to predict the CLIP vector from the EEG.
+3. For new EEG, we predict a CLIP vector, then pick the closest candidate image or video, or pass the vector to a generator.
+
 ## Clip source
 
 "Dog-agility-06-05-28-luz-stp.ogv", Wikimedia Commons, CC BY-SA 2.5.
