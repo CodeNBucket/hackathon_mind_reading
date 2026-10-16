@@ -4,7 +4,8 @@ This is the master plan to follow day by day. The other docs go deeper on one pa
 - `BRIEF.md`: the official task
 - `eeg/PLAN.md`: Person 1's three models in detail
 - `INSIGHTS.md`: the psychology and brain-vs-AI analyses
-- `WORK_SPLIT.md`: the original split, now summarised here
+
+The hackathon lasts 48 hours, so the phase times below are rough guides in hours after the data arrives.
 
 | | Person 1 | Person 2 |
 |---|---|---|
@@ -44,7 +45,7 @@ video 1..N ─────────────────────► CL
 
 If the card model changes (e.g. VideoMAE with 768 numbers), Person 2 publishes the new cards file and Person 1 retrains. Nothing else changes.
 
-When the organisers' template scripts arrive, their data loading and submission format win. We adapt the contract to them on day 1.
+When the organisers' template scripts arrive, their data loading and submission format win. We adapt the contract to them in phase 1.
 
 ## 3. Repo layout (target)
 
@@ -95,11 +96,14 @@ Tick the boxes as you go. "Done when" is the check that a task is finished.
 - [ ] Write `visual/evaluate.py` (top-1/top-5, confusion table, top-5 per trial).
   *Done when:* on fake data, the "perfect brain" test (true cards as predictions) gives 100%.
 - [ ] Prepare the simple video features: brightness, motion energy (OpenCV), scene cuts (PySceneDetect), face present.
+- [ ] Test V-JEPA 2 (`facebook/vjepa2-vitl-fpc64-256`) on one clip with a GPU (CUDA build of torch). Note memory use and seconds per clip, so phase 2 has no surprises.
 
 **Together**
 - [ ] Agree the contract table above. Both read `BRIEF.md` and `INSIGHTS.md`.
 
-### Phase 1: data day (day 1 after the data arrives)
+### Phase 1: data arrives (≈ hours 0–8)
+
+**Together, first:** read the organisers' template and baseline scripts end to end, run their baseline as is, and write its score in the results table. That's the first number to beat.
 
 **Person 1**
 - [ ] Load the organiser data with their template. Write down the shapes: subjects, trials, electrodes, time points, sampling rate, how the trial → video table looks.
@@ -112,9 +116,9 @@ Tick the boxes as you go. "Done when" is the check that a task is finished.
 - [ ] Answer the open question in `BRIEF.md`: are the test videos the same as the training videos? This decides whether a plain classifier is also allowed.
 - [ ] Score Person 1's first predictions with `evaluate.py`.
 
-**Together, end of day 1:** both checks pass. The perfect brain gives 100%, and training with shuffled labels drops to chance. Then we have a first honest score.
+**Together, end of phase 1:** both checks pass. The perfect brain gives 100%, and training with shuffled labels drops to chance. Then we have a first honest score.
 
-### Phase 2: better models (days 2–4)
+### Phase 2: better models (≈ hours 8–24)
 
 **Person 1**
 - [ ] Step 2: PCA + MLP + contrastive loss.
@@ -132,7 +136,7 @@ Tick the boxes as you go. "Done when" is the check that a task is finished.
 
 **Together, mid-phase:** pick the card model and the best EEG step. Freeze the contract.
 
-### Phase 3: insights, the judged part (days 4–6)
+### Phase 3: insights, the judged part (≈ hours 24–40)
 
 **Person 1**
 - [ ] Decoding over time: accuracy per 50 ms window. Shows *when* the brain "knows".
@@ -147,7 +151,7 @@ Tick the boxes as you go. "Done when" is the check that a task is finished.
 
 **Together:** pick the 3–4 strongest findings and write one slide each: question → figure → one-sentence answer.
 
-### Phase 4: submission (last 1–2 days)
+### Phase 4: submission (last ≈ 8 hours)
 
 **Person 1**
 - [ ] Final model in `eeg/predict.py`, weights in `eeg/weights/`, retrained on all 4 subjects.
@@ -166,17 +170,17 @@ Tick the boxes as you go. "Done when" is the check that a task is finished.
 
 ## 5. How we work together
 
-- **Branches:** `p1/<topic>` and `p2/<topic>`. Small pull requests into `main`, at least once a day. The other person skims each one.
+- **Branches:** `p1/<topic>` and `p2/<topic>`. Small pull requests into `main`, every few hours. The other person skims each one.
 - **Folders:** Person 1 commits in `eeg/`, Person 2 in `visual/`. `shared/` and the contract change only through a pull request both have seen.
 - **Data:** organiser data lives in `data_raw/` (git-ignored). Never commit raw EEG or videos from the challenge.
-- **Daily 10-minute sync:** yesterday's score, today's plan, anything blocking. Update the results table in `eeg/PLAN.md`.
+- **10-minute sync every ~4 hours:** current score, next step, anything blocking. Update the results table in `eeg/PLAN.md`.
 - **Decisions:** write one line in the README under "Decisions" (date, what, why) so the reasoning is reproducible.
 
 ## 6. Risks and fallbacks
 
 | Risk | Fallback |
 |---|---|
-| Template differs from our plan | Their format wins. Adapt `eeg/data.py` and the contract on day 1. |
+| Template differs from our plan | Their format wins. Adapt `eeg/data.py` and the contract in phase 1. |
 | Advanced models don't beat ridge | Submit ridge (or an ensemble) and present the comparison as a finding. |
 | Low accuracy on new subjects | Per-subject scaling, calibration on the partial test data, fewer and more robust features. |
 | V-JEPA 2 too heavy or slow | Skip the world-model cards; keep only the surprise curve on a subset, or drop it. |

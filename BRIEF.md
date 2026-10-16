@@ -12,7 +12,7 @@ Copied from the organizers' announcement. The data and template scripts haven't 
 | Dimensionality reduction | PCA (and later CCA / spatial filters) on the EEG side |
 | Video foundational models | CLIP, VideoMAE on the video side |
 | World models | V-JEPA 2: video vectors and a "surprise over time" curve |
-| Insights into biological vs artificial vision | Brain timing vs model depth, which electrodes carry the information, and whether brain and model confuse the same videos (see `WORK_SPLIT.md`) |
+| Insights into biological vs artificial vision | Brain timing vs model depth, which electrodes carry the information, and whether brain and model confuse the same videos (see `INSIGHTS.md`) |
 | 4 training subjects, 2 partially-held-out test subjects | Always validate leave-one-subject-out. "Partially" probably means a little data from the new people for calibration. |
 | Share pipelines and weights, Python 3.11, templates provided | `requirements.txt`, saved weights, one `run.py`. The organizers' template layout wins once it arrives. |
 

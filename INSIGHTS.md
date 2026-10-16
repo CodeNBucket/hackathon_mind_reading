@@ -2,7 +2,7 @@
 
 The brief rewards "scientifically meaningful insights into the similarities and differences between how biological and artificial systems process visual stimuli". Psychology enters in three places: **before** the model (design), **inside** it (features), and **after** it (the brain vs AI comparisons).
 
-## 1. Before: design choices from what we know about vision (EEG side)
+## 1. Before: design choices from what we know about vision (Person 1)
 
 - **Where:** back of the head = visual cortex. Side-back electrodes (P7/P8) = face and object areas.
 - **When:** ~100 ms (P1/N1) light, edges, motion. ~170 ms (N170) faces. ~300 ms+ (P300) attention, surprise, meaning.
@@ -10,7 +10,7 @@ The brief rewards "scientifically meaningful insights into the similarities and 
 
 Slide line: "our features follow the known timeline of human vision."
 
-## 2. Inside: human-readable video features (video side)
+## 2. Inside: human-readable video features (Person 2)
 
 Next to CLIP / VideoMAE / V-JEPA 2 vectors, describe each video with features that each have a known brain response:
 brightness, amount of motion, scene-cut times, whether a face is present, and the world-model surprise curve.
@@ -21,12 +21,12 @@ Each one becomes a checkable hypothesis, e.g. "does the N170 appear only for fac
 
 | Analysis | Question | Who |
 | --- | --- | --- |
-| **Decoding over time** | Accuracy per 50 ms EEG window: when does the brain "know" what it saw? | EEG |
-| **Head map** | Which electrodes carry the information? | EEG |
-| **Time vs depth (RSA)** | Does early EEG match early model layers (edges) and later EEG match later layers (objects)? Same order = shared hierarchy. | EEG + video |
-| **Which model is most brain-like (RSA)** | Correlate the brain's 20×20 video-similarity table with each model's table (simple features, CLIP, VideoMAE, V-JEPA 2). | EEG + video |
-| **Same confusions?** | Does the brain-based decoder mix up the same videos the models find similar? | EEG + video |
-| **Surprise** | Does the EEG react at the moments V-JEPA 2 is surprised (predictive coding)? | EEG + video |
+| **Decoding over time** | Accuracy per 50 ms EEG window: when does the brain "know" what it saw? | Person 1 |
+| **Head map** | Which electrodes carry the information? | Person 1 |
+| **Time vs depth (RSA)** | Does early EEG match early model layers (edges) and later EEG match later layers (objects)? Same order = shared hierarchy. | Person 1 + 2 |
+| **Which model is most brain-like (RSA)** | Correlate the brain's 20×20 video-similarity table with each model's table (simple features, CLIP, VideoMAE, V-JEPA 2). | Person 1 + 2 |
+| **Same confusions?** | Does the brain-based decoder mix up the same videos the models find similar? | Person 1 + 2 |
+| **Surprise** | Does the EEG react at the moments V-JEPA 2 is surprised (predictive coding)? | Person 1 + 2 |
 
 ## Differences worth showing
 

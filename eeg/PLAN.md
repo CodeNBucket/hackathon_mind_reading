@@ -17,7 +17,7 @@ Every step produces exactly the same kind of file, so `visual/evaluate.py` score
 
 Every step also saves its trained weights to `eeg/weights/<step>.*` (`.npz` for step 1, `.pt` for steps 2–3). Sharing weights is required by the organizers.
 
-The 512 comes from the video vectors (CLIP ViT-B/32, see `WORK_SPLIT.md`). If the video person switches the video model, for example to VideoMAE with 768 numbers, all three steps switch with it. Only the last layer changes.
+The 512 comes from the video vectors (CLIP ViT-B/32, see `PROJECT_PLAN.md`). If the video person switches the video model, for example to VideoMAE with 768 numbers, all three steps switch with it. Only the last layer changes.
 
 ## Shared by all three
 
