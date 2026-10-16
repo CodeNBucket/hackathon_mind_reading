@@ -1,76 +1,84 @@
 # Work split: EEG person and video person
 
+Task: from a person's EEG, identify which 3-second video they watched, and show it.
+
 ```
-EEG trial ──► [EEG person: EEG model] ──► 512 numbers ──► [Video person: search / generator] ──► image or video
-                                              ▲
-                                  the only thing both sides share
+EEG trial ──► [EEG person: EEG model] ──► predicted video vector ──► [Video person: search / generator] ──► video
+                                                   ▲
+                                     the only thing both sides share
 ```
 
 ## The contract (agreed once, changed only together)
 
 | Item | Value |
 |---|---|
-| Embedding model | `openai/clip-vit-base-patch32`, image embedding, normalised to length 1 |
-| Vector size | 512 |
-| Exchange format | `.npy` of shape `(N, 512)` plus a `.txt` with the N image ids in the same order |
-| Test set | the 200 THINGS-EEG test images, in the dataset's own order |
-| Score | top-1 and top-5 accuracy: is the right image among the 1 or 5 closest out of 200? Chance is 0.5% / 2.5% |
+| Video vector | CLIP `openai/clip-vit-base-patch32`. Take 8 evenly spaced frames per 3 s clip, average them, normalise to length 1. Gives 512 numbers (experiment 01). |
+| Exchange format | `.npy` of shape `(N, 512)` plus a `.csv` with the N video ids in the same order |
+| Candidates | all videos in the challenge's test set |
+| Score | top-1 and top-5: is the right video among the 1 or 5 closest candidates? With 20 videos, chance is 5% / 25%. |
 
 Exchange files go in `shared/`. Code goes in `eeg/` or `visual/`. Raw data goes in `data_raw/` (not in git).
+
+Until the organisers' data arrives, both sides practise on `experimentation/02_synthetic_eeg_practice` (fake EEG, same shape as the challenge). Its `video_embeddings_toy.npy` gets replaced by real vectors from the video person.
 
 ---
 
 ## EEG person
 
-**Job:** turn a brain signal into a CLIP vector.
+**Job:** turn a brain signal into a predicted video vector.
 
-**Goal:** predicted vectors that land close to the real CLIP vector of the image the person saw. Success is measured by the shared score.
+**Goal:** predictions that land closest to the video the person actually watched, on subjects the model has never seen. Success is measured by the shared score.
 
 **Steps**
-1. Download THINGS-EEG preprocessed data for one participant (sub-01).
-   - Train: 16,540 images × 4 repetitions × 17 channels × 100 time points.
-   - Test: 200 images × 80 repetitions.
-2. Average the repetitions and flatten each trial to 1,700 numbers. Standardise (z-score) the features.
-3. Baseline: ridge regression from EEG (1,700) to CLIP (512), trained on `shared/clip_targets/train.npy`.
-4. Improve:
-   - pick the best time window (roughly 60–500 ms) and channels
+1. Load the EEG trials: 33 electrodes × 320 time points per trial in the mock.
+2. Clean the data:
+   - remove or repair blink trials
+   - baseline-correct
+   - average repetitions of the same video where allowed
+3. Features: back-of-head electrodes and 50 ms time bins, then PCA. Experiment 02 already does this and gives 650 → 40 numbers.
+4. Baseline: ridge regression from the EEG features to the 512-number video vectors in `shared/video_vectors/`.
+5. Improve:
+   - better time windows
    - small neural net
    - contrastive (CLIP-style) loss
-   - more participants
-5. Each time the score improves, export the predictions.
+   - leave-one-subject-out validation
+6. Each time the score improves, export the predictions.
 
 **Expected output**
-- `shared/predictions/sub-01_test.npy`: shape (200, 512), test-image order.
-- A line in the README with the method and its score. Rough guide:
-  - Ridge baseline: a few % top-1. Anything well above 0.5% means the signal is real.
-  - Good: 15%+ top-1, 40%+ top-5.
+- `eeg/predict.py`: EEG trials in, `(trials, 512)` predicted vectors out.
+- `shared/predictions/<method>.npy` + a `.csv` listing, for each trial, its subject and true video id.
+- A line in the README with the method and its score. Experiment 02's ridge pipeline on fake data gives 34% top-1, 85% top-5 out of 20. That is the bar to beat once real data arrives.
 
 ---
 
 ## Video person
 
-**Job:** turn a CLIP vector into something you can see, and measure how good it is.
+**Job:** turn videos into vectors, turn predicted vectors back into videos, and measure how good it is.
 
-**Goal:** a working pipeline that, given any (N, 512) file, scores it and shows the decoded images or videos. It must be ready before the EEG model is good, so the EEG person can see results immediately.
+**Goal:** a pipeline that, given any predictions file, scores it and shows the decoded videos. It must be ready before the EEG model is good, so the EEG person sees results immediately.
 
 **Steps**
 1. **Day 1 (blocks the EEG person, do it first):**
-   - Compute CLIP vectors for the THINGS-EEG images, reusing `experimentation/01_video_to_clip_vector/pipeline/clip_embed.py`.
-   - Save `shared/clip_targets/train.npy` (16540, 512), `shared/clip_targets/test.npy` (200, 512), and the matching id lists.
+   - Run experiment 01's `pipeline/clip_embed.py` over every challenge video, or the mock video list until the real ones arrive.
+   - Save `shared/video_vectors/vectors.npy` (videos, 512) and `ids.csv`.
 2. `visual/evaluate.py`:
    - input: a predictions file
-   - output: top-1 / top-5 accuracy, and a picture grid of the 5 closest images for each test trial
-3. Self-test: run `evaluate.py` on the real test vectors (a "perfect brain"). It must score 100%. This proves the pipeline before any EEG is involved.
-4. Video output, from simplest to most impressive:
-   - a. **Retrieval:** embed a library of short video clips with experiment 01 and show the closest clip.
-   - b. **Generation:** feed the vector to an image generator that accepts CLIP image embeddings, then optionally animate the image with an image-to-video model.
-     - Most of these generators expect a bigger CLIP (ViT-H/14, 1024 numbers). If we go this way, both people switch the contract together. It only means re-running step 1 with another model name.
-5. Final demo script and slides.
+   - output: top-1 / top-5, a confusion table (which videos get mixed up), and the top-5 candidates per trial
+3. Self-test: feed the real video vectors as predictions (a "perfect brain"). It must score 100%.
+4. Try other video vectors and report which ones the EEG person should target:
+   - CLIP with more frames
+   - VideoMAE (768 numbers)
+   - per-second vectors instead of one per clip
+
+   Any change of vector goes through the contract.
+5. Demo, from simplest to most impressive:
+   - a. **Retrieval:** play the closest candidate video next to the true one.
+   - b. **Generation (stretch):** generate a new image or video from the predicted vector (needs a GPU and possibly a bigger CLIP).
 
 **Expected output**
-- `shared/clip_targets/*` (day 1)
-- `visual/evaluate.py` + the score report
-- `visual/demo.py`: predictions in → images/videos out
+- `shared/video_vectors/*` (day 1)
+- `visual/evaluate.py` + score report
+- `visual/demo.py`: predictions in → videos shown side by side
 
 ---
 
@@ -80,12 +88,12 @@ There is no big merge at the end. The two sides connect through files from day 1
 
 | When | EEG person | Video person | Connection |
 |---|---|---|---|
-| Day 1 | download EEG, load it | `clip_targets` | agree on the contract table above |
-| Day 2 | ridge baseline → `predictions/` | `evaluate.py`, perfect-brain test = 100% | **first real score** |
-| Middle | better models, new prediction files | video retrieval / generation | every new prediction file is scored and visualised the same way |
-| End | best model + `eeg/predict.py` (EEG trial → 512 numbers) | `visual/demo.py` | `run_demo.py` = `eeg/predict.py` → `visual/demo.py` |
+| Day 1 | load and clean EEG (mock first) | `shared/video_vectors` | agree on the contract table above |
+| Day 2 | ridge baseline → `shared/predictions/` | `evaluate.py`, perfect-brain test = 100% | **first real score** |
+| Middle | better models, new prediction files | better video vectors, demo | every prediction file is scored the same way. A new video vector means the EEG person retrains. |
+| End | best model behind `eeg/predict.py` | `visual/demo.py` | `run_demo.py` = `eeg/predict.py` → `visual/demo.py` |
 
-Final demo flow: pick a test EEG trial → EEG model predicts 512 numbers → closest image/clip and/or generated video → show it next to the image the person actually saw, plus the overall top-1/top-5 score.
+Final demo flow: pick an EEG trial → EEG model predicts 512 numbers → closest video(s) → play it next to the video the person really watched, plus the overall top-1/top-5 score.
 
 Rules that keep you unblocked:
 - Never change the contract alone.
