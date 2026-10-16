@@ -9,12 +9,12 @@ from pathlib import Path
 
 import av
 import numpy as np
-import torch
 
 from .config import CACHE_DIR, TEST_IDS, TRAIN_IDS
 from .data import video_path
 
 CLIP_NAME = "openai/clip-vit-base-patch32"
+CLIP_REVISION = "3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268"
 N_FRAMES = 8
 
 
@@ -25,16 +25,17 @@ def read_frames(path: Path, n: int = N_FRAMES):
     return [frames[i].to_image() for i in idx]  # convert only the frames we keep
 
 
-@torch.no_grad()
 def extract_clip(video_ids=None, name="clip_b32", batch_videos=16, verbose=True):
     """Returns dict(ids [n], frames [n, N_FRAMES, 512], mean [n, 512]); cached."""
     out = CACHE_DIR / f"{name}.npz"
     if out.exists():
         z = np.load(out)
         return {k: z[k] for k in z.files}
+    import torch
     from transformers import CLIPModel, CLIPProcessor
-    model = CLIPModel.from_pretrained(CLIP_NAME).eval()
-    proc = CLIPProcessor.from_pretrained(CLIP_NAME)
+    torch.set_grad_enabled(False)
+    model = CLIPModel.from_pretrained(CLIP_NAME, revision=CLIP_REVISION).eval()
+    proc = CLIPProcessor.from_pretrained(CLIP_NAME, revision=CLIP_REVISION)
     ids = np.array(video_ids if video_ids is not None else TRAIN_IDS + TEST_IDS)
     feats = np.zeros((len(ids), N_FRAMES, 512), np.float32)
     CACHE_DIR.mkdir(exist_ok=True)

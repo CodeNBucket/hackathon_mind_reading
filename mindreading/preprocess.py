@@ -37,6 +37,29 @@ def window(eeg, tmin=0.0, tmax=1.0):
     return eeg[:, :, a:b]
 
 
-def prepare(eeg, norm="set", tmin=0.0, tmax=1.0):
-    """Full preprocessing: raw (n, 17, 1500) -> (n, 17, T) at 100 Hz."""
-    return window(normalise(downsample(eeg), norm), tmin, tmax)
+def common_average(eeg):
+    """Subtract the mean over electrodes at every time point (common average reference).
+    The 17 channels are ~0.77 correlated; the shared part is mostly noise for our purpose."""
+    return eeg - eeg.mean(axis=1, keepdims=True)
+
+
+def whiten_channels(eeg, shrink=0.3):
+    """Decorrelate the electrodes using this file's own channel covariance, shrunk towards
+    the identity (multivariate noise normalisation). Unsupervised, so allowed on test files."""
+    flat = eeg.transpose(1, 0, 2).reshape(eeg.shape[1], -1)
+    C = np.cov(flat)
+    C = (1 - shrink) * C + shrink * np.trace(C) / len(C) * np.eye(len(C))
+    w, V = np.linalg.eigh(C)
+    W = V @ np.diag(1 / np.sqrt(np.maximum(w, 1e-8))) @ V.T
+    return np.einsum("ij,njt->nit", W, eeg).astype(np.float32)
+
+
+def prepare(eeg, norm="set", tmin=0.0, tmax=1.0, car=False, whiten=0.0):
+    """Full preprocessing: raw (n, 17, 1500) -> (n, 17, T) at 100 Hz.
+    whiten > 0 enables channel whitening with that shrinkage."""
+    x = downsample(eeg)
+    if car:
+        x = common_average(x)
+    if whiten:
+        x = whiten_channels(x, whiten)
+    return window(normalise(x, norm), tmin, tmax)
