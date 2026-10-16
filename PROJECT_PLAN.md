@@ -1,10 +1,10 @@
 # Project plan: EEG → which video?
 
-This is the master plan to follow day by day. The other docs go deeper on one part each:
-- `BRIEF.md`: the official task
+This is the master plan to follow. The other docs go deeper on one part each:
+- `BRIEF.md`: the official task, the real data shapes, the rules and the exact submission format
 - `eeg/PLAN.md`: Person 1's three models in detail
 
-The hackathon lasts 48 hours, so the phase times below are rough guides in hours after the data arrives.
+Work days are **17–18 October 2026**, so the phase times below are rough guides in hours of working time. The real data is 17 channels × 1500 samples (500 Hz) per recording, 1,000 training videos with sound, and **102 new test videos**; see `BRIEF.md`.
 
 | | Person 1 | Person 2 |
 |---|---|---|
@@ -29,7 +29,7 @@ video 1..N ─────────────────────► CL
 
 - **Card:** a list of numbers (512 for CLIP) describing a video. The single numbers have no names; only the distance between cards matters. Similar videos get similar cards.
 - **Translator:** a model learned from trials where we know which video was shown. It converts EEG into a card.
-- **Score:** how often the right video is the closest (top-1) or among the 5 closest (top-5). With 20 videos, chance is 5% / 25%.
+- **Score:** how often the right video is the closest (top-1) or among the 5 closest (top-5). With the real 102 candidates, chance is 1.0% / 4.9%.
 
 ## 2. The contract (change only together, by pull request)
 
@@ -38,8 +38,9 @@ video 1..N ─────────────────────► CL
 | Card model | CLIP `openai/clip-vit-base-patch32`, 8 evenly spaced frames per 3 s clip, averaged, normalised to length 1 → **512 numbers** |
 | Video cards file | `shared/video_vectors/<model>.npy` (videos × 512) + `shared/video_vectors/ids.csv` |
 | Prediction file | `shared/predictions/<method>_<heldout>.npy` (trials × 512, normalised) + `.csv` with `subject, trial, true_video_id` |
-| Validation | leave-one-subject-out: train on 3 subjects, test on the 4th, rotate through all 4 |
+| Validation | hold out ~15% of the *training videos* for every subject for model and hyperparameter selection. Report the final score on the `sub-01`…`sub-04` test sets (allowed for validation only, never as templates for `sub-05`/`sub-06`). Also leave-one-subject-out on the training data as a robustness check. |
 | Score | top-1, top-5, per held-out subject and mean |
+| Submission | `sub-05_ranked_candidate_list.npy`, `sub-06_ranked_candidate_list.npy`: int arrays 102 × 102 of video ids 1001–1102, rows in the original `tst` order. Built and checked by `shared/ranking.py`. |
 | Python | 3.11, pinned `requirements.txt` per folder |
 
 If the card model changes (e.g. VideoMAE with 768 numbers), Person 2 publishes the new cards file and Person 1 retrains. Nothing else changes.
@@ -107,12 +108,12 @@ Tick the boxes as you go. "Done when" is the check that a task is finished.
 **Person 1**
 - [ ] Load the organiser data with their template. Write down the shapes: subjects, trials, electrodes, time points, sampling rate, how the trial → video table looks.
 - [ ] Cleaning in `eeg/data.py`: baseline correction, 0.1–40 Hz filter, blink handling, per-subject scaling.
-- [ ] Run step 1 (PCA + ridge) leave-one-subject-out.
+- [ ] Run step 1 (PCA + ridge) on the held-out training videos, then on the `sub-01`…`sub-04` test sets.
   *Done when:* the first real top-1/top-5 is in the results table of `eeg/PLAN.md`.
 
 **Person 2**
 - [ ] Run `embed_videos.py` on all challenge videos. Commit `shared/video_vectors/` **first thing**, because Person 1 needs it for step 1.
-- [ ] Answer the open question in `BRIEF.md`: are the test videos the same as the training videos? This decides whether a plain classifier is also allowed.
+- [ ] Extract features for all 1,000 training and 102 test videos, **both visual and audio** (the videos have sound). The test videos are new, so only the vector route works.
 - [ ] Score Person 1's first predictions with `evaluate.py`.
 
 **Together, end of phase 1:** both checks pass. The perfect brain gives 100%, and training with shuffled labels drops to chance. Then we have a first honest score.
@@ -123,7 +124,7 @@ Tick the boxes as you go. "Done when" is the check that a task is finished.
 - [ ] Step 2: PCA + MLP + contrastive loss.
 - [ ] Step 3: EEGNet-style network + contrastive loss (braindecode / PyTorch). Use augmentation and early stopping.
 - [ ] Psychology-based feature variants (from what's known about vision): visual electrodes only, time windows around P1/N1, N170, P300, alpha power.
-- [ ] Calibration plan for the 2 partially-held-out test subjects (re-center/re-scale, fine-tune the last layer).
+- [ ] Decide between one model for all 6 subjects (with per-subject scaling) and per-subject models. `sub-05`/`sub-06` have ~900 labeled training recordings each, so both are possible.
 - [ ] Fill the results table for every step and variant.
   *Done when:* each row has scores for all 4 held-out subjects plus the shuffled control.
 
@@ -153,8 +154,8 @@ Tick the boxes as you go. "Done when" is the check that a task is finished.
 ### Phase 4: submission (last ≈ 8 hours)
 
 **Person 1**
-- [ ] Final model in `eeg/predict.py`, weights in `eeg/weights/`, retrained on all 4 subjects.
-- [ ] Apply to the 2 test subjects (with calibration if allowed). Write predictions in the organisers' format.
+- [ ] Final model in `eeg/predict.py`, weights in `eeg/weights/`, retrained on the training recordings of all 6 subjects.
+- [ ] Apply to the `sub-05`/`sub-06` test recordings. Write the two 102 × 102 files with `shared/ranking.py`, and first run the same code on `sub-01` to check the format against `tst_stim`.
 
 **Person 2**
 - [ ] `run_all.py`: one command from raw data to scores and figures.
@@ -181,14 +182,15 @@ Tick the boxes as you go. "Done when" is the check that a task is finished.
 |---|---|
 | Template differs from our plan | Their format wins. Adapt `eeg/data.py` and the contract in phase 1. |
 | Advanced models don't beat ridge | Submit ridge (or an ensemble) and present the comparison as a finding. |
-| Low accuracy on new subjects | Per-subject scaling, calibration on the partial test data, fewer and more robust features. |
+| Low accuracy on `sub-05`/`sub-06` | Per-subject scaling, train on their own training recordings, fewer and more robust features. |
 | V-JEPA 2 too heavy or slow | Skip the world-model cards; keep only the surprise curve on a subset, or drop it. |
 | Not enough time for all insights | Priority order: decoding over time → head map → which model is most brain-like → the rest. |
 
 ## 7. Definition of done (submission checklist)
 
-- [ ] Predictions for the 2 test subjects in the organisers' format
+- [ ] `sub-05_ranked_candidate_list.npy` and `sub-06_ranked_candidate_list.npy` (102 × 102 ints, ids 1001–1102, unsorted row order)
+- [ ] Report, slides and a 5-minute presentation (approach, diagrams, results, failure cases, lessons)
 - [ ] Training pipeline + weights in the repo, reproducible in a fresh Python 3.11 venv
-- [ ] Results table: every step × every held-out subject, with the shuffled control
+- [ ] Results table: every step × `sub-01`…`sub-04`, with the shuffled control
 - [ ] 3–4 insight figures with a one-line answer each
 - [ ] Demo: an EEG trial → the predicted video next to the true one

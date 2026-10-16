@@ -8,6 +8,8 @@ Each step changes **one thing** from the step before, so we always know what mad
 | 2. Better learning | PCA (same as step 1) | small neural net (MLP) | contrastive: "closer to the right video than to the 19 wrong ones" |
 | 3. Advanced | learned by the network itself (no PCA) | small EEG network (EEGNet-style, convolutions over electrodes and time) | contrastive (same as step 2) |
 
+**Both directions.** The organizers' own baseline works the other way: video features → PCA + regression → *predicted EEG*, then rank candidates by distance between the real EEG and each predicted EEG. We build that too (same features, same scoring file) and compare it with the three steps below, then try averaging both rankings.
+
 ## Same output for all three (the contract)
 
 Every step produces exactly the same kind of file, so `visual/evaluate.py` scores all of them the same way:
@@ -22,26 +24,27 @@ The 512 comes from the video vectors (CLIP ViT-B/32, see `PROJECT_PLAN.md`). If 
 ## Shared by all three
 
 **Cleaning (done once, reused)**
-- baseline-correct with the 200 ms before the video starts
-- band-pass filter 0.1–40 Hz
-- detect blinks on the front electrodes (Fp1, Fp2); drop or repair those trials
-- standardise each subject separately, which helps on new subjects
+- the recordings are 17 channels × 1500 samples (500 Hz, 3 s from video onset) with **no pre-stimulus baseline**, so remove each channel's mean (or slow drift) instead of baseline-correcting
+- band-pass filter 0.1–40 Hz, then downsample (e.g. to 100 Hz, 300 samples)
+- check the 17 channel names first (the brief doesn't list them), then pick the visual-cortex ones and look for blinks on any frontal ones
+- standardise each subject separately
 
 **Validation**
-- Leave-one-subject-out: train on 3 subjects, test on the 4th, rotate through all 4.
+- Hold out ~15% of each subject's *training videos* for model and hyperparameter selection. Report the final score on the `sub-01`…`sub-04` test sets (validation only; never as templates for `sub-05`/`sub-06`). Leave-one-subject-out on the training data is a robustness check.
 - Report top-1 / top-5 per held-out subject and on average.
 
 **Sanity checks, every run**
 - *Perfect brain:* evaluating the true video vectors must give 100%.
-- *Shuffled control:* train with the trial → video labels shuffled; the score must drop to chance (5% / 25% with 20 videos). If it doesn't, something leaks.
+- *Shuffled control:* train with the trial → video labels shuffled; the score must drop to chance (1.0% / 4.9% with 102 candidates). If it doesn't, something leaks.
 
-**The 2 partially-held-out test subjects**
-- If we get a little data from them, use it to calibrate: re-center and re-scale their EEG with it (all steps), or fine-tune only the last layer on it (steps 2–3).
+**The 2 held-out subjects (`sub-05`, `sub-06`)**
+- We have their own labeled *training* recordings (~900 each), so they can be part of training. Their test labels are withheld.
+- Normalize each subject separately. Unsupervised normalization of test recordings is allowed.
 
 ## Step 1: PCA + ridge (baseline, about 1 hour)
 
 - Features: back-of-head electrodes × 50 ms time bins, from 0 to 3 s.
-- PCA fitted on the training subjects only. Try k = 20, 40, 80, 160.
+- PCA fitted on the training recordings only. Try k = 20, 40, 80, 160.
 - Ridge regression to the 512 numbers. Choose the regularisation strength by cross-validation inside the training subjects.
 - Starting point: `experimentation/02_synthetic_eeg_practice/end_to_end_example.py`.
 - Insight output: plot what the top PCA components look like as head maps and timelines.
