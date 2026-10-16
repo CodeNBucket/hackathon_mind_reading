@@ -17,6 +17,8 @@ EEG trial ──► [EEG person: EEG model] ──► predicted video vector ─
 | Candidates | all videos in the challenge's test set |
 | Score | top-1 and top-5: is the right video among the 1 or 5 closest candidates? With 20 videos, chance is 5% / 25%. |
 
+When the organisers' template arrives, its layout and submission format win, and we adapt this plan to it.
+
 Exchange files go in `shared/`. Code goes in `eeg/` or `visual/`. Raw data goes in `data_raw/` (not in git).
 
 Until the organisers' data arrives, both sides practise on `experimentation/02_synthetic_eeg_practice` (fake EEG, same shape as the challenge). Its `video_embeddings_toy.npy` gets replaced by real vectors from the video person.
@@ -47,6 +49,8 @@ Until the organisers' data arrives, both sides practise on `experimentation/02_s
 **Expected output**
 - `eeg/predict.py`: EEG trials in, `(trials, 512)` predicted vectors out.
 - `shared/predictions/<method>.npy` + a `.csv` listing, for each trial, its subject and true video id.
+- The final model's saved weights in `eeg/weights/`. Sharing weights is a required deliverable.
+- For the insight story, a decoding-over-time curve: how much each 50 ms window and each brain area tells us about the video.
 - A line in the README with the method and its score. Experiment 02's ridge pipeline on fake data gives 34% top-1, 85% top-5 out of 20. That is the bar to beat once real data arrives.
 
 ---
@@ -71,6 +75,11 @@ Until the organisers' data arrives, both sides practise on `experimentation/02_s
    - per-second vectors instead of one per clip
 
    Any change of vector goes through the contract.
+
+   Also try two non-CLIP baselines:
+   - simple features: brightness, motion energy, scene cuts. They're cheap, and the brain reacts strongly to them, so they keep us honest.
+   - a world-model surprise curve: how badly V-JEPA 2 predicts each next moment of the video. We then check whether the EEG reacts at the same moments.
+4b. **Brain vs AI analysis (this is the judged "insight").** RSA: for each EEG time window, compare which videos the brain treats as similar with which videos each model and layer treats as similar. Plot model/layer against time.
 5. Demo, from simplest to most impressive:
    - a. **Retrieval:** play the closest candidate video next to the true one.
    - b. **Generation (stretch):** generate a new image or video from the predicted vector (needs a GPU and possibly a bigger CLIP).
@@ -79,6 +88,7 @@ Until the organisers' data arrives, both sides practise on `experimentation/02_s
 - `shared/video_vectors/*` (day 1)
 - `visual/evaluate.py` + score report
 - `visual/demo.py`: predictions in → videos shown side by side
+- `visual/results/`: the video-vector comparison table, the model/layer × time RSA figure and the surprise-curve comparison
 
 ---
 
@@ -92,6 +102,8 @@ There is no big merge at the end. The two sides connect through files from day 1
 | Day 2 | ridge baseline → `shared/predictions/` | `evaluate.py`, perfect-brain test = 100% | **first real score** |
 | Middle | better models, new prediction files | better video vectors, demo | every prediction file is scored the same way. A new video vector means the EEG person retrains. |
 | End | best model behind `eeg/predict.py` | `visual/demo.py` | `run_demo.py` = `eeg/predict.py` → `visual/demo.py` |
+
+For the slides, the EEG person brings the decoding-over-time curve and the video person brings the brain-vs-AI figures. Together they tell the story.
 
 Final demo flow: pick an EEG trial → EEG model predicts 512 numbers → closest video(s) → play it next to the video the person really watched, plus the overall top-1/top-5 score.
 
