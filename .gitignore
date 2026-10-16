@@ -9,3 +9,7 @@ models/
 
 # Large raw datasets (EEG downloads etc.) - keep them local, not in git
 /data_raw/
+
+# Cached video features and intermediate arrays (rebuilt by run_all.py)
+/cache/
+.ipynb_checkpoints/

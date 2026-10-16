@@ -1,0 +1,16 @@
+# Python 3.11. CPU build of torch; swap the index URL for a CUDA build if you have a GPU.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.14.1
+transformers==5.20.1
+av==18.1.0
+numpy==2.4.6
+scipy==1.17.1
+scikit-learn==1.9.1
+pandas==3.0.6
+matplotlib==3.11.2
+pillow==12.3.0
+joblib
+nbformat
+nbclient==0.11.0
+ipykernel==7.4.0
+jupyter

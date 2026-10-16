@@ -1,0 +1,296 @@
+{
+  "window 0-1s, pooled": {
+    "config": {
+      "tmin": 0.0,
+      "tmax": 1.0,
+      "norm": "set",
+      "feature_key": "mean",
+      "pool_subjects": true,
+      "methods": [
+        "encoder",
+        "decoder"
+      ],
+      "enc_pca": null,
+      "dec_pca": 200,
+      "train_subjects": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "shuffle_labels": false
+    },
+    "scores": {
+      "encoder": {
+        "top1": 0.023924733942907502,
+        "top5": 0.09437434380642012,
+        "median_rank": 48.75
+      },
+      "decoder": {
+        "top1": 0.008330900754798982,
+        "top5": 0.04873294552985603,
+        "median_rank": 52.0
+      },
+      "combined": {
+        "top1": 0.016703192043946245,
+        "top5": 0.08539873869269599,
+        "median_rank": 43.75
+      }
+    },
+    "seconds": 19.7
+  },
+  "window 0-0.6s": {
+    "config": {
+      "tmin": 0.0,
+      "tmax": 0.6,
+      "norm": "set",
+      "feature_key": "mean",
+      "pool_subjects": true,
+      "methods": [
+        "encoder",
+        "decoder"
+      ],
+      "enc_pca": null,
+      "dec_pca": 200,
+      "train_subjects": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "shuffle_labels": false
+    },
+    "scores": {
+      "encoder": {
+        "top1": 0.01900302709026017,
+        "top5": 0.08580871588595351,
+        "median_rank": 47.5
+      },
+      "decoder": {
+        "top1": 0.00833910850948561,
+        "top5": 0.05220029723664436,
+        "median_rank": 53.0
+      },
+      "combined": {
+        "top1": 0.019181963707179516,
+        "top5": 0.07815076402082309,
+        "median_rank": 45.5
+      }
+    },
+    "seconds": 12.8
+  },
+  "window 0-2s": {
+    "config": {
+      "tmin": 0.0,
+      "tmax": 2.0,
+      "norm": "set",
+      "feature_key": "mean",
+      "pool_subjects": true,
+      "methods": [
+        "encoder",
+        "decoder"
+      ],
+      "enc_pca": null,
+      "dec_pca": 200,
+      "train_subjects": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "shuffle_labels": false
+    },
+    "scores": {
+      "encoder": {
+        "top1": 0.019229546501241184,
+        "top5": 0.08058549145555052,
+        "median_rank": 49.0
+      },
+      "decoder": {
+        "top1": 0.007165399589297817,
+        "top5": 0.04937005794570538,
+        "median_rank": 56.083333333333336
+      },
+      "combined": {
+        "top1": 0.01910940588814283,
+        "top5": 0.07859294139394095,
+        "median_rank": 47.416666666666664
+      }
+    },
+    "seconds": 18.2
+  },
+  "window 0-3s": {
+    "config": {
+      "tmin": 0.0,
+      "tmax": 3.0,
+      "norm": "set",
+      "feature_key": "mean",
+      "pool_subjects": true,
+      "methods": [
+        "encoder",
+        "decoder"
+      ],
+      "enc_pca": null,
+      "dec_pca": 200,
+      "train_subjects": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "shuffle_labels": false
+    },
+    "scores": {
+      "encoder": {
+        "top1": 0.009764311865629448,
+        "top5": 0.06773603794276216,
+        "median_rank": 50.166666666666664
+      },
+      "decoder": {
+        "top1": 0.007165399589297817,
+        "top5": 0.04329147476580462,
+        "median_rank": 58.25
+      },
+      "combined": {
+        "top1": 0.019221338746554555,
+        "top5": 0.06465596794992524,
+        "median_rank": 50.75
+      }
+    },
+    "seconds": 22.8
+  },
+  "per-trial normalisation": {
+    "config": {
+      "tmin": 0.0,
+      "tmax": 1.0,
+      "norm": "trial",
+      "feature_key": "mean",
+      "pool_subjects": true,
+      "methods": [
+        "encoder",
+        "decoder"
+      ],
+      "enc_pca": null,
+      "dec_pca": 200,
+      "train_subjects": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "shuffle_labels": false
+    },
+    "scores": {
+      "encoder": {
+        "top1": 0.023980876252570938,
+        "top5": 0.07801781178655327,
+        "median_rank": 48.416666666666664
+      },
+      "decoder": {
+        "top1": 0.008330900754798982,
+        "top5": 0.04680669570492379,
+        "median_rank": 54.0
+      },
+      "combined": {
+        "top1": 0.01687356914526383,
+        "top5": 0.06677166407970588,
+        "median_rank": 47.416666666666664
+      }
+    },
+    "seconds": 14.7
+  },
+  "per-subject models": {
+    "config": {
+      "tmin": 0.0,
+      "tmax": 1.0,
+      "norm": "set",
+      "feature_key": "mean",
+      "pool_subjects": false,
+      "methods": [
+        "encoder",
+        "decoder"
+      ],
+      "enc_pca": null,
+      "dec_pca": 200,
+      "train_subjects": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "shuffle_labels": false
+    },
+    "scores": {
+      "encoder": {
+        "top1": 0.02714950249025669,
+        "top5": 0.09473624803020532,
+        "median_rank": 44.666666666666664
+      },
+      "decoder": {
+        "top1": 0.007165399589297817,
+        "top5": 0.0450657131711198,
+        "median_rank": 60.583333333333336
+      },
+      "combined": {
+        "top1": 0.014299983654822365,
+        "top5": 0.07841665847117915,
+        "median_rank": 46.75
+      }
+    },
+    "seconds": 18.2
+  },
+  "8 frames instead of mean": {
+    "config": {
+      "tmin": 0.0,
+      "tmax": 1.0,
+      "norm": "set",
+      "feature_key": "frames",
+      "pool_subjects": true,
+      "methods": [
+        "encoder",
+        "decoder"
+      ],
+      "enc_pca": null,
+      "dec_pca": 200,
+      "train_subjects": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "shuffle_labels": false
+    },
+    "scores": {
+      "encoder": {
+        "top1": 0.020411814937030745,
+        "top5": 0.07333111853784276,
+        "median_rank": 49.416666666666664
+      },
+      "decoder": {
+        "top1": 0.011821211991589092,
+        "top5": 0.049202048100276174,
+        "median_rank": 51.75
+      },
+      "combined": {
+        "top1": 0.018039070310764998,
+        "top5": 0.07635969302257355,
+        "median_rank": 45.666666666666664
+      }
+    },
+    "seconds": 75.0
+  }
+}
