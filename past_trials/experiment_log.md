@@ -107,6 +107,16 @@ No differences beyond noise: 100 Hz, 0–1.2 s low-level and PCA 128 are kept.
 
 After about 1 s the exact wave shape varies too much from viewing to viewing to be predicted (window, TRF and coarse-bin variants all fail). The slower brain "state", measured as the power of each rhythm, is predictable from the video and adds information. TRF (Crosse et al., 2016) is the standard method for continuous stimuli; here it stays weak.
 
+## Round 10: final window decision (with rhythm power)
+| EEG wave window / low-level window | held-out training videos top-1 / top-5 / median | sub-01…04 test top-1 / top-5 / median |
+|---|---|---|
+| **0–1.0 s / 0–1.0 s (chosen)** | **7.6% / 24.7% / 18.1** | **18.6% / 46.1% / 6.5** |
+| 0–1.0 s / 0–1.2 s | 7.7% / 24.4% / 18.0 | 17.6% / 45.6% / 6.6 |
+| 0–1.5 s / 0–1.2 s | 6.5% / 21.9% / 20.0 | 16.7% / 42.6% / 8.1 |
+| 0–1.5 s / 0–1.5 s | 6.5% / 22.1% / 19.9 | 16.4% / 41.9% / 7.9 |
+
+The EMD paper reports that video-feature encoding of single EEG time points is significant up to ~1.5 s. Adding 1.0–1.5 s to the wave window still lowers the ranking score, so the wave stays at 0–1 s and the later part is used through rhythm power. Low-level features now cover 0–1.0 s, the same as the EEG wave window.
+
 ## Milestone scores on the sub-01…04 test sets (102 candidates)
 | model | top-1 | top-5 | median rank |
 |---|---|---|---|
@@ -117,7 +127,8 @@ After about 1 s the exact wave shape varies too much from viewing to viewing to 
 | + per-feature ridge strength | 13.7% | 36.5% | 9.1 |
 | + VideoMAE | 15.2% | 41.7% | 8.3 |
 | + member weights 1 / 0.25 / 0.25 | 16.7% | 46.1% | 6.3 |
-| **+ rhythm power, 0–3 s (final)** | **17.6%** | **45.6%** | **6.6** |
+| + rhythm power, 0–3 s | 17.6% | 45.6% | 6.6 |
+| **+ low-level window 0–1.0 s (final, branch rhythm-power)** | **18.6%** | **46.1%** | **6.5** |
 | shuffled-label control (final model) | 0.7% | 3.2% | |
 
 On the test sets, rhythm power is neutral (+0.9 top-1, −0.5 top-5, within noise), although alone it scores 13.7% top-5 there (chance 4.9%). The test recordings are cleaner than the training recordings (test/train amplitude ratio ~0.65, consistent with averaging over more repetitions), so the wave model already dominates there. It was kept because the decision rule is the held-out training videos, where it adds +3.5 points.

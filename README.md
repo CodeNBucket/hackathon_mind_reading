@@ -64,7 +64,7 @@ The same direction as the organisers' baseline (video → predicted EEG → comp
    |---|---|---|
    | CLIP ViT-B/32, 8 frames | 1.0 | Objects and scenes |
    | VideoMAE layers 4/8/12 | 0.6 | Motion and actions |
-   | Low-level time courses every 0.1 s: brightness, contrast, saturation, motion, edges, scene cuts, loudness, sound onsets | 0.6 | Timing the early visual and auditory brain reacts to |
+   | Low-level time courses every 0.1 s over 0–1 s (same as the EEG window): brightness, contrast, saturation, motion, edges, scene cuts, loudness, sound onsets | 0.6 | Timing the early visual and auditory brain reacts to |
    | AST layer 4 | 0.5 | What the sound is |
 3. **Encoders:**
    - Ridge regression from features to the 17 × 100 EEG.
@@ -88,9 +88,9 @@ Trained weights: `weights/ensemble_encoders.joblib`.
 | organisers' baseline (AlexNet) | ~4% | 11.7% | |
 | first version: CLIP + ridge | 5.1% | 23.3% | 18.3 |
 | wave model only (0–1 s) | 16.7% | 46.1% | 6.3 |
-| **final model (+ rhythm power 0–3 s)** | **17.6%** | **45.6%** | **6.6** |
+| **final model (+ rhythm power 0–3 s)** | **18.6%** | **46.1%** | **6.5** |
 | shuffled-label control | 0.7% | 3.2% | |
 
-Per subject, final model (top-1 / top-5): sub-01 18.6 / 47.1, sub-02 19.6 / 42.2, sub-03 11.8 / 46.1, sub-04 20.6 / 47.1. On held-out training videos, rhythm power adds +3.5 points top-5 (20.9% → 24.4%). On the test sets it is neutral (within noise); see `past_trials/experiment_log.md`, round 9.
+Per subject, final model (top-1 / top-5): sub-01 20.6 / 48.0, sub-02 17.6 / 44.1, sub-03 14.7 / 47.1, sub-04 21.6 / 45.1. On held-out training videos, rhythm power adds about +4 points top-5 (20.9% → 24.7%). On the test sets it adds +1.9 points top-1 at the same top-5; see `past_trials/experiment_log.md`, rounds 9–10.
 
 All settings were chosen on held-out *training* videos (3 random splits averaged). The sub-01…04 test answers were only used to report these scores, never to choose anything and never for sub-05/06.
