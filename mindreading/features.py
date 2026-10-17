@@ -184,4 +184,74 @@ def extract_ast(layers=(4, 8, 12)):
     return cached("ast", one)
 
 
-EXTRACTORS = {"lowlevel": extract_lowlevel, "videomae": extract_videomae, "ast": extract_ast}
+# ---------------------------------------------------------------- time-resolved versions (for trf.py)
+
+WIN_STARTS = np.arange(0.0, 2.01, 0.25)          # 1-s windows starting every 0.25 s: 0-1 ... 2-3 s
+
+
+def extract_videomae_windows(layer=8):
+    """VideoMAE on sliding 1-s windows (16 frames each): (videos, 9 windows, 768)."""
+    import torch
+    from transformers import VideoMAEImageProcessor, VideoMAEModel
+    name, rev = "MCG-NJU/videomae-base-finetuned-kinetics", REVISIONS["videomae"]
+    dev = _device()
+    model = VideoMAEModel.from_pretrained(name, revision=rev).to(dev).eval()
+    proc = VideoMAEImageProcessor.from_pretrained(name, revision=rev)
+
+    @torch.no_grad()
+    def one(vid):
+        frames, t = read_video(video_path(vid))
+        clips = [list(frames_at(frames, t, np.linspace(s, s + 0.95, 16))) for s in WIN_STARTS]
+        px = proc(clips, return_tensors="pt")["pixel_values"].to(dev)
+        hs = model(pixel_values=px, output_hidden_states=True).hidden_states
+        return {"windows": hs[layer].mean(1).cpu().numpy().astype(np.float32)}
+
+    return cached("videomae_windows", one)
+
+
+def extract_ast_windows(layer=4):
+    """AST on sliding 1-s audio windows: (videos, 9 windows, 768)."""
+    import torch
+    from transformers import ASTFeatureExtractor, ASTModel
+    name, rev = "MIT/ast-finetuned-audioset-10-10-0.4593", REVISIONS["ast"]
+    dev = _device()
+    model = ASTModel.from_pretrained(name, revision=rev).to(dev).eval()
+    fe = ASTFeatureExtractor.from_pretrained(name, revision=rev)
+    sr = 16000
+
+    @torch.no_grad()
+    def one(vid):
+        a = read_audio(video_path(vid), sr)
+        chunks = [a[int(s * sr):int((s + 1.0) * sr)] for s in WIN_STARTS]
+        x = fe(chunks, sampling_rate=sr, return_tensors="pt")["input_values"].to(dev)
+        hs = model(input_values=x, output_hidden_states=True).hidden_states
+        return {"windows": hs[layer].mean(1).cpu().numpy().astype(np.float32)}
+
+    return cached("ast_windows", one)
+
+
+def extract_clip_dense(n_frames=15):
+    """CLIP ViT-B/32 on 15 frames (every 0.2 s): (videos, 15, 512)."""
+    import torch
+    from transformers import CLIPModel, CLIPProcessor
+    name, rev = "openai/clip-vit-base-patch32", REVISIONS["clip_b32"]
+    dev = _device()
+    model = CLIPModel.from_pretrained(name, revision=rev).to(dev).eval()
+    proc = CLIPProcessor.from_pretrained(name, revision=rev)
+    t_list = np.arange(n_frames) * DURATION / n_frames + 0.1
+
+    @torch.no_grad()
+    def one(vid):
+        frames, t = read_video(video_path(vid))
+        px = proc(images=list(frames_at(frames, t, t_list)), return_tensors="pt")["pixel_values"].to(dev)
+        emb = model.get_image_features(pixel_values=px)
+        emb = getattr(emb, "pooler_output", emb)
+        emb = emb / emb.norm(dim=-1, keepdim=True)
+        return {"frames": emb.cpu().numpy().astype(np.float32)}
+
+    return cached("clip_dense", one)
+
+
+EXTRACTORS = {"lowlevel": extract_lowlevel, "videomae": extract_videomae, "ast": extract_ast,
+              "videomae_windows": extract_videomae_windows, "ast_windows": extract_ast_windows,
+              "clip_dense": extract_clip_dense}
