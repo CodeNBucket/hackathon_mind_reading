@@ -69,7 +69,7 @@ shared/
   video_vectors/    cards (Person 2 writes)
   predictions/      predicted cards (Person 1 writes)
 run_all.py          end to end: data → models → scores → figures
-experimentation/    learning experiments (01 video → card, 02 fake EEG)
+experimentation/    03_look_at_real_data: viewer for the organiser files
 data_raw/           organiser data, NOT in git
 ```
 
@@ -82,15 +82,12 @@ Tick the boxes as you go. "Done when" is the check that a task is finished.
 ### Phase 0: before the data arrives (now)
 
 **Person 1 (EEG)**
-- [ ] Run `experimentation/02_synthetic_eeg_practice` (`walkthrough.py`, `end_to_end_example.py`, `pca_sweep.py`) and understand each printed step.
-  *Done when:* you can explain trial → 650 features → PCA → ridge → card → closest video.
 - [ ] Write `eeg/step1_ridge.py` against the fake data, producing the prediction-file format above.
   *Done when:* `visual/evaluate.py` scores it.
 - [ ] Draft `eeg/step2_mlp.py` (PCA + small MLP + contrastive loss) on fake data.
 - [ ] Read 1–2 papers. Search terms: "EEG to CLIP contrastive", "THINGS-EEG zero-shot".
 
 **Person 2 (video + evaluation)**
-- [ ] Run `experimentation/01_video_to_clip_vector` and understand `outputs/output.json`.
 - [ ] Write `visual/embed_videos.py`: a folder of videos → `shared/video_vectors/clip_b32.npy` + `ids.csv`.
   *Done when:* it runs on 3–5 test clips.
 - [ ] Write `visual/evaluate.py` (top-1/top-5, confusion table, top-5 per trial).

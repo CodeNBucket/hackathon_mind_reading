@@ -9,10 +9,7 @@ Identify which 3-second video a person watched from their EEG. Hackathon project
 - `BRIEF.md`: the official hackathon brief and how each part maps to our plan.
 - `mindreading/`: the pipeline code (see below). `notebooks/`: the three notebooks that run it.
 - `results/experiment_log.md`: every experiment, with its score, in the order we ran them.
-- `experimentation/`: small, self-contained experiments to learn how the pieces work. Each experiment has its own README, `requirements.txt` and `run.py`.
-  - `01_video_to_clip_vector/`: turns a 3 s video into a 512-number CLIP vector.
-  - `02_synthetic_eeg_practice/`: fake EEG data shaped like the challenge, plus the full EEG → video vector → pick-a-video pipeline running on it.
-  - `03_look_at_real_data/`: a viewer for the organisers' `trn`/`tst` files.
+- `experimentation/03_look_at_real_data/`: a viewer for the organisers' `trn`/`tst` files. (The earlier learning experiments 01 and 02 were removed; they are still in the git history.)
 
 ## Pipeline (runs end to end)
 

@@ -46,7 +46,7 @@ The 512 comes from the video vectors (CLIP ViT-B/32, see `PROJECT_PLAN.md`). If 
 - Features: back-of-head electrodes × 50 ms time bins, from 0 to 3 s.
 - PCA fitted on the training recordings only. Try k = 20, 40, 80, 160.
 - Ridge regression to the 512 numbers. Choose the regularisation strength by cross-validation inside the training subjects.
-- Starting point: `experimentation/02_synthetic_eeg_practice/end_to_end_example.py`.
+- Starting point: `mindreading/ensemble.py` (the current ridge ensemble).
 - Insight output: plot what the top PCA components look like as head maps and timelines.
 
 ## Step 2: PCA + small net + contrastive loss
