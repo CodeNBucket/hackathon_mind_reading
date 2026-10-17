@@ -1,6 +1,6 @@
 """Fast experiments on the EEG side (encoder direction), validated on held-out TRAINING videos.
 
-    .venv\\Scripts\\python.exe scripts\\exp_eeg.py <experiment>
+    .venv\\Scripts\\python.exe past_trials\\exp_eeg.py <experiment>
 """
 import sys
 import time

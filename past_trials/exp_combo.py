@@ -1,6 +1,6 @@
 """Combinations of feature blocks under the best EEG settings (validated on held-out training videos).
 
-    .venv\\Scripts\\python.exe scripts\\exp_combo.py <name>
+    .venv\\Scripts\\python.exe past_trials\\exp_combo.py <name>
 """
 import sys
 from pathlib import Path

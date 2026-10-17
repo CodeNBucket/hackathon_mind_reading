@@ -10,7 +10,8 @@ Identify which 3-second video a person watched from their EEG. Hackathon project
 | `run_all.py` | One command: runs the three notebooks in order |
 | `notebooks/` | `03_video_features`, `04_train_and_validate`, `05_predict_submission` |
 | `mindreading/` | The code the notebooks call (see "Code" below) |
-| `scripts/` | Feature extraction, the experiments behind the log, and the notebook generator |
+| `scripts/` | Feature extraction and the notebook generator |
+| `past_trials/` | The experiment code behind `results/experiment_log.md` (not needed to run the pipeline) |
 | `results/` | `experiment_log.md` (every experiment and its score) and `dev_test_scores.json` |
 | `weights/` | The trained model (required deliverable) |
 | `submission/` | `sub-05_ranked_candidate_list.npy` and `sub-06_…`: what we hand in |
@@ -47,7 +48,7 @@ Set `MINDREADING_DATA` if the organisers' data isn't in the default folder (see 
 
 The notebooks only call the code in `mindreading/`. Scripts:
 - `scripts/extract_features.py`: computes all features in one go.
-- `scripts/exp_eeg.py` and `scripts/exp_combo.py`: reproduce the experiments in the log.
+- `past_trials/exp_eeg.py` and `past_trials/exp_combo.py`: reproduce the experiments in the log.
 - `scripts/build_notebooks.py`: regenerates the notebooks.
 
 ### Model
