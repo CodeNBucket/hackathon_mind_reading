@@ -4,12 +4,30 @@ Identify which 3-second video a person watched from their EEG. Hackathon project
 
 ## Layout
 
-- `PROJECT_PLAN.md`: **start here.** The master plan: Person 1 (EEG) and Person 2 (video + evaluation), phases, tasks and checklists.
-- `eeg/PLAN.md`: the EEG side's 3 steps from PCA to advanced, all with the same output format.
-- `BRIEF.md`: the official hackathon brief and how each part maps to our plan.
-- `mindreading/`: the pipeline code (see below). `notebooks/`: the three notebooks that run it.
-- `results/experiment_log.md`: every experiment, with its score, in the order we ran them.
-- `experimentation/03_look_at_real_data/`: a viewer for the organisers' `trn`/`tst` files. (The earlier learning experiments 01 and 02 were removed; they are still in the git history.)
+| Path | What it is |
+|---|---|
+| `BRIEF.md` | The official task, the data and the rules |
+| `run_all.py` | One command: runs the three notebooks in order |
+| `notebooks/` | `03_video_features`, `04_train_and_validate`, `05_predict_submission` |
+| `mindreading/` | The code the notebooks call (see "Code" below) |
+| `scripts/` | Feature extraction, the experiments behind the log, and the notebook generator |
+| `results/` | `experiment_log.md` (every experiment and its score) and `dev_test_scores.json` |
+| `weights/` | The trained model (required deliverable) |
+| `submission/` | `sub-05_ranked_candidate_list.npy` and `sub-06_…`: what we hand in |
+| `requirements.txt` | Exact library versions (Python 3.11) |
+| `cache/`, `.venv/` | On your computer only (git-ignored): saved features and the Python environment |
+
+### Code (`mindreading/`), in the order the data flows
+
+| File | Does |
+|---|---|
+| `config.py` | Where the data is, subject lists, constants |
+| `data.py` | Reads the organisers' files (`trn`, `tst`, `tst_stim`) |
+| `video_features.py` | Videos → CLIP features |
+| `features.py` | Videos → VideoMAE, low-level time courses and AST audio features |
+| `preprocess.py` | EEG: 100 Hz, channel whitening, z-scoring, 0–1 s window |
+| `model.py` | The model: video features → predicted EEG, 3 encoders per subject, scoring, validation |
+| `ranking.py` | Scores → the 102 × 102 submission format, plus the format checker |
 
 ## Pipeline (runs end to end)
 
@@ -27,7 +45,10 @@ Set `MINDREADING_DATA` if the organisers' data isn't in the default folder (see 
 | `notebooks/04_train_and_validate` | 01, train + check | EEG preprocessing, the experiment log, validation on held-out *training* videos, the sub-01…04 test score, and a shuffled-label check |
 | `notebooks/05_predict_submission` | 02 | Trains the final model, saves `weights/`, checks the format on sub-01, writes `submission/sub-05/06_ranked_candidate_list.npy` |
 
-The code lives in `mindreading/` (`features.py`, `preprocess.py`, `ensemble.py`); the notebooks only call it. `scripts/build_notebooks.py` regenerates the notebooks. `scripts/exp_eeg.py` and `scripts/exp_combo.py` reproduce the experiments.
+The notebooks only call the code in `mindreading/`. Scripts:
+- `scripts/extract_features.py`: computes all features in one go.
+- `scripts/exp_eeg.py` and `scripts/exp_combo.py`: reproduce the experiments in the log.
+- `scripts/build_notebooks.py`: regenerates the notebooks.
 
 ### Model
 

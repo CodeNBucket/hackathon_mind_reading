@@ -15,7 +15,7 @@ from sklearn.preprocessing import StandardScaler
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from mindreading.config import CACHE_DIR, SUBJECTS  # noqa: E402
 from mindreading.data import load_test, load_train  # noqa: E402
-from mindreading.pipeline import split_train_videos  # noqa: E402
+from mindreading.model import split_train_videos  # noqa: E402
 
 ALPHAS = np.logspace(-3, 7, 21)
 SEEDS = (0, 1, 2)  # validation splits averaged, to reduce noise

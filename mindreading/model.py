@@ -1,18 +1,23 @@
-"""Improved model: multi-feature encoder ensemble.
+"""The model: predict the EEG each video should cause, then rank videos by similarity.
 
-What changed compared with the base model (each change was validated on held-out
-*training* videos, see scripts/exp_eeg.py and scripts/exp_combo.py):
+How it works (every choice validated on held-out *training* videos, see results/experiment_log.md):
 
-1. EEG: common average reference (subtract the mean over electrodes) before z-scoring.
-2. Video features: several blocks (CLIP, audio, low-level time courses, ...). Each block is
-   standardised on the training videos, optionally PCA-reduced, scaled to equal total size,
-   and multiplied by a block weight. Blocks are concatenated.
-3. Three encoders per target subject, whose scores are z-scored and added:
-   - "subject":  trained on that subject's own training recordings
-   - "pooled":   trained on the training recordings of all 6 subjects
-   - "ga":       trained on the grand average over subjects per video (much less noise)
-Candidates are ranked by the correlation between the real EEG and each encoder's
-predicted EEG for that candidate video.
+1. Video features ("cards"): four blocks per video, each standardised on the training videos,
+   optionally PCA-reduced, scaled to equal size, weighted, and concatenated:
+       clip  (1.0)  CLIP ViT-B/32, what is in the picture
+       mae   (0.6)  VideoMAE, motion and actions
+       low   (0.6)  brightness / motion / cuts / loudness ... every 0.1 s
+       ast4  (0.5)  AST audio model, what the sound is
+2. EEG: 100 Hz, channel whitening, z-score per file, 0-1 s after video onset (preprocess.py).
+3. Encoder: ridge regression from the video features to the EEG (17 electrodes x 100 time
+   points). Every electrode x time point gets its own regularisation strength, so parts of
+   the EEG that can't be predicted are shrunk to ~0.
+4. Three encoders per subject, scores added with weights:
+       subject (1.0)  trained on that subject's own training recordings
+       pooled  (0.25) trained on all 6 subjects' training recordings
+       ga      (0.25) trained on the grand-average EEG over subjects for each video
+5. Score of (recording, candidate video) = correlation between the real EEG and the EEG the
+   encoder predicts for that video. Higher = more likely.
 """
 from dataclasses import dataclass, field
 
@@ -23,24 +28,23 @@ from sklearn.preprocessing import StandardScaler
 
 from .config import CACHE_DIR, SEED, SUBJECTS, TEST_IDS, TRAIN_IDS
 from .data import load_test, load_train
-from .models import correlation_matrix, topk
 from .preprocess import prepare
 
-ALPHAS = np.logspace(-3, 7, 21)
+ALPHAS = np.logspace(-3, 7, 21)   # ridge strengths to choose from
 
-# name -> (cache file, array key, selection applied to the array, PCA dims or None)
+# block name -> (cache file, array key, selection applied to the array, PCA dims or None)
 BLOCKS = {
-    "clip":    ("clip_b32", "mean", None, None),
-    "ast4":    ("ast", "layers", lambda a: a[:, 0], 128),            # audio, AST layer 4
-    "ast":     ("ast", "layers", None, 128),                          # audio, AST layers 4/8/12
-    "low":     ("lowlevel", "timecourse", lambda a: a[:, :12], None),  # 0-1.2 s time courses
-    "mae":     ("videomae", "layers", None, 128),                     # VideoMAE layers 4/8/12
-    "l14":     ("clip_l14", "embed", lambda a: a.mean(1), None),     # CLIP-L/14, mean of 16 frames
-    "l14cls":  ("clip_l14", "cls", lambda a: a.mean(1), 256),        # CLIP-L/14 layers 6/12/18/24
+    "clip": ("clip_b32", "mean", None, None),                        # CLIP, 8 frames averaged
+    "mae":  ("videomae", "layers", None, 128),                       # VideoMAE layers 4/8/12
+    "low":  ("lowlevel", "timecourse", lambda a: a[:, :12], None),   # time courses, 0-1.2 s
+    "ast4": ("ast", "layers", lambda a: a[:, 0], 128),               # AST audio, layer 4
 }
 
 
+# ---------------------------------------------------------------- video features
+
 def load_block(name):
+    """{video id: feature vector} for one block, scaled using training videos only."""
     file, key, select, n_pca = BLOCKS[name]
     z = np.load(CACHE_DIR / f"{file}.npz")
     arr = z[key].astype(np.float32)
@@ -48,7 +52,7 @@ def load_block(name):
         arr = select(arr)
     X = arr.reshape(len(arr), -1)
     ids = z["ids"].astype(int)
-    tr = ids <= 1000                                  # fit scaling/PCA on training videos only
+    tr = ids <= 1000
     X = StandardScaler().fit(X[tr]).transform(X)
     if n_pca and n_pca < X.shape[1]:
         X = PCA(n_pca, random_state=SEED).fit(X[tr]).transform(X)
@@ -58,8 +62,9 @@ def load_block(name):
 
 
 class VideoFeatures:
+    """Call with a list of video ids -> matrix (videos x all weighted blocks)."""
+
     def __init__(self, blocks: dict):
-        """blocks: {block name: weight}."""
         self.blocks = blocks
         self.tables = {b: load_block(b) for b in blocks}
 
@@ -68,23 +73,22 @@ class VideoFeatures:
                                for b, w in self.blocks.items()], 1)
 
 
+# ---------------------------------------------------------------- model
+
 @dataclass
-class EnsembleConfig:
+class Config:
     blocks: dict = field(default_factory=lambda: {"clip": 1.0, "ast4": 0.5, "low": 0.6, "mae": 0.6})
-    tmin: float = 0.0
+    tmin: float = 0.0                  # EEG window, seconds after video onset
     tmax: float = 1.0
-    car: bool = False
+    car: bool = False                  # common average reference (replaced by whitening)
     whiten: float = 0.3                # channel whitening shrinkage (0 = off)
     members: tuple = ("subject", "pooled", "ga")
     member_weights: dict = field(default_factory=lambda: {"subject": 1.0, "pooled": 0.25, "ga": 0.25})
-    shuffle_labels: bool = False
+    shuffle_labels: bool = False       # sanity check: wrong video per recording -> must score chance
 
 
 class Encoder:
-    """Video features -> flattened EEG, ridge regression (features are only centred).
-    Each EEG feature (electrode x time point) gets its own regularisation strength, chosen by
-    efficient leave-one-out CV: uninformative points get shrunk to ~0 and stop affecting the
-    correlation, so the comparison focuses on the predictable parts of the response."""
+    """Video features -> flattened EEG (ridge regression, one strength per EEG feature)."""
 
     def fit(self, V, Y):
         self.mu = V.mean(0)
@@ -100,14 +104,20 @@ def _rowz(a):
     return a / (a.std(1, keepdims=True) + 1e-8)
 
 
-class EnsembleModel:
-    def __init__(self, cfg: EnsembleConfig, feats: VideoFeatures | None = None):
+def correlation_matrix(a, b):
+    """Pearson correlation between every row of a and every row of b."""
+    return _rowz(a) @ _rowz(b).T / a.shape[1]
+
+
+class Model:
+    def __init__(self, cfg: Config, feats: VideoFeatures | None = None):
         self.cfg = cfg
         self.feats = feats or VideoFeatures(cfg.blocks)
         self.eeg = {}
 
     # -------- data
     def train_eeg(self, sub):
+        """(video ids, EEG matrix recordings x 1700) for a subject's training file, cached."""
         if sub not in self.eeg:
             ids, e = load_train(sub)
             x = prepare(e, "set", self.cfg.tmin, self.cfg.tmax, self.cfg.car, self.cfg.whiten)
@@ -115,6 +125,7 @@ class EnsembleModel:
         return self.eeg[sub]
 
     def test_eeg(self, sub):
+        """(EEG matrix 102 x 1700 in the file's original order, true ids or None)."""
         e, labels = load_test(sub)
         x = prepare(e, "set", self.cfg.tmin, self.cfg.tmax, self.cfg.car, self.cfg.whiten)
         return x.reshape(len(x), -1), labels
@@ -126,7 +137,7 @@ class EnsembleModel:
         return Encoder().fit(self.feats(ids), Y)
 
     def fit_shared(self, fit_ids=None):
-        """Members shared by all subjects: pooled and grand-average encoders."""
+        """Encoders shared by all subjects: pooled and grand average."""
         keep = (lambda i: np.ones(len(i), bool)) if fit_ids is None else (lambda i: np.isin(i, fit_ids))
         data = {s: self.train_eeg(s) for s in SUBJECTS}
         self.shared = {}
@@ -145,19 +156,31 @@ class EnsembleModel:
         return self
 
     def fit_subject(self, sub, fit_ids=None):
+        """The subject's own encoder."""
         ids, Y = self.train_eeg(sub)
         m = np.ones(len(ids), bool) if fit_ids is None else np.isin(ids, fit_ids)
         return {"subject": self._encoder(ids[m], Y[m])} if "subject" in self.cfg.members else {}
 
     # -------- scoring
     def scores(self, members: dict, eeg, candidate_ids):
+        """{member: score matrix, 'ensemble': weighted sum}, each (recordings x candidates)."""
         C = self.feats(candidate_ids)
         per = {k: correlation_matrix(eeg, m.predict(C)) for k, m in members.items()}
         per["ensemble"] = sum(self.cfg.member_weights.get(k, 1.0) * _rowz(s) for k, s in per.items())
         return per
 
 
+# ---------------------------------------------------------------- evaluation
+
+def topk(scores, true_cols):
+    """top-1, top-5 and median rank of the true candidate (rank 1 = best)."""
+    true_score = scores[np.arange(len(scores)), true_cols]
+    r = (scores > true_score[:, None]).sum(axis=1) + 1
+    return {"top1": float((r <= 1).mean()), "top5": float((r <= 5).mean()), "median_rank": float(np.median(r))}
+
+
 def split_train_videos(frac=0.15, seed=SEED):
+    """Hide a random 15% of the training videos (same videos for every subject)."""
     rng = np.random.default_rng(seed)
     ids = np.array(TRAIN_IDS)
     val = np.sort(rng.choice(ids, int(len(ids) * frac), replace=False))
@@ -165,8 +188,8 @@ def split_train_videos(frac=0.15, seed=SEED):
 
 
 def validate(cfg, seeds=(0, 1, 2), subjects=SUBJECTS, model=None):
-    """Held-out TRAINING videos (no test data). Mean over seeds; returns {member: {top1, top5}}."""
-    model = model or EnsembleModel(cfg)
+    """Score on hidden TRAINING videos (no test data), averaged over 3 random splits."""
+    model = model or Model(cfg)
     acc = {}
     for seed in seeds:
         fit_ids, val_ids = split_train_videos(seed=seed)
@@ -184,7 +207,7 @@ def validate(cfg, seeds=(0, 1, 2), subjects=SUBJECTS, model=None):
 
 def dev_test(cfg, subjects=(1, 2, 3, 4), model=None):
     """Train on all training recordings; score the sub-01..04 test sets (report only)."""
-    model = model or EnsembleModel(cfg)
+    model = model or Model(cfg)
     model.fit_shared()
     cand = np.array(TEST_IDS)
     res = {}
@@ -195,7 +218,14 @@ def dev_test(cfg, subjects=(1, 2, 3, 4), model=None):
     return res
 
 
-def predict_ranked(model, sub, members):
-    """Score matrix (102 recordings in original order x 102 candidates) for a subject."""
+def summarise(res):
+    """Mean over subjects for each member."""
+    members = next(iter(res.values())).keys()
+    return {m: {k: float(np.mean([r[m][k] for r in res.values()])) for k in ("top1", "top5", "median_rank")}
+            for m in members}
+
+
+def predict_scores(model, sub, members):
+    """Score matrix for a subject's test file: 102 recordings (original order) x 102 candidates."""
     eeg, _ = model.test_eeg(sub)
     return model.scores(members, eeg, np.array(TEST_IDS))["ensemble"]

@@ -2,7 +2,7 @@
 
 Every change was judged on **held-out training videos**: 15% of the 1,000 training videos are hidden, the model is trained on the rest, and each hidden recording is ranked against the ~150 hidden videos (chance: top-1 0.7%, top-5 3.3%). From round 3 on, results are averaged over 3 different random hidden sets to reduce noise. The sub-01…04 **test sets** (102 candidates, chance 1.0% / 4.9%) were used only to report milestone scores, never to choose settings.
 
-Scripts: `scripts/search_settings.py` (round 0), `scripts/exp_eeg.py`, `scripts/exp_combo.py`.
+Scripts: `scripts/exp_eeg.py`, `scripts/exp_combo.py` (round 0 was run with the first version of the code, removed since; it is in git history at commit 8e5ae95).
 
 ## Round 0: base model (CLIP-B/32 card → ridge → predicted EEG, per-subject)
 | setting | top-1 | top-5 |

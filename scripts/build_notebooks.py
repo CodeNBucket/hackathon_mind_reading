@@ -100,7 +100,7 @@ compare with the real EEG), with the improvements we validated one by one.
    training files).
 4. Keep 0–1 s after video onset (later windows only added noise).
 
-**Model** (`mindreading/ensemble.py`): for each subject, three encoders whose scores are added:
+**Model** (`mindreading/model.py`): for each subject, three encoders whose scores are added:
 - **subject**: trained on that subject's own training recordings
 - **pooled**: trained on all 6 subjects' training recordings
 - **ga**: trained on the *grand average* EEG over subjects for each video (much cleaner target)
@@ -141,9 +141,9 @@ display(Markdown((RESULTS_DIR / 'experiment_log.md').read_text(encoding='utf-8')
 Takes a few minutes. Shows each ensemble member on its own and the full ensemble.
 """),
     code("""
-from mindreading.ensemble import EnsembleConfig, EnsembleModel, validate, dev_test
-cfg = EnsembleConfig()
-model = EnsembleModel(cfg)
+from mindreading.model import Config, Model, validate, dev_test, summarise
+cfg = Config()
+model = Model(cfg)
 val = validate(cfg, model=model)
 for k, v in val.items():
     print(f"{k:9s} top1 {v['top1']:.3f}  top5 {v['top5']:.3f}  median rank {v['median_rank']:.1f}")
@@ -153,7 +153,6 @@ for k, v in val.items():
 Organisers' AlexNet baseline: about **4% top-1, 11.7% top-5**.
 """),
     code("""
-from mindreading.pipeline import summarise
 res = dev_test(cfg, model=model)
 for s, r in res.items():
     e = r['ensemble']
@@ -172,7 +171,7 @@ chance, information is leaking from somewhere.
 """),
     code("""
 from dataclasses import replace
-shuf = summarise(dev_test(replace(cfg, shuffle_labels=True), model=EnsembleModel(replace(cfg, shuffle_labels=True), model.feats)))
+shuf = summarise(dev_test(replace(cfg, shuffle_labels=True), model=Model(replace(cfg, shuffle_labels=True), model.feats)))
 print(f"shuffled: top1 {shuf['ensemble']['top1']:.3f}  top5 {shuf['ensemble']['top5']:.3f}   (chance 0.010 / 0.049)")
 """),
 ]
@@ -196,11 +195,11 @@ The sub-05/06 test recordings are used **only here**, once, to produce the predi
     code(SETUP),
     code("""
 import joblib
-from mindreading.ensemble import EnsembleConfig, EnsembleModel, predict_ranked
-from shared.ranking import scores_to_ranked_ids, check_ranked, evaluate, save_submission
+from mindreading.model import Config, Model, predict_scores
+from mindreading.ranking import scores_to_ranked_ids, check_ranked, evaluate, save_submission
 
-cfg = EnsembleConfig()
-model = EnsembleModel(cfg).fit_shared()
+cfg = Config()
+model = Model(cfg).fit_shared()
 members = {s: {**model.fit_subject(s), **model.shared} for s in (1, 5, 6)}
 WEIGHTS_DIR.mkdir(exist_ok=True)
 weights = {'config': cfg.__dict__,
@@ -212,7 +211,7 @@ joblib.dump(weights, WEIGHTS_DIR / 'ensemble_encoders.joblib', compress=3)
 print('saved', WEIGHTS_DIR / 'ensemble_encoders.joblib')
 """),
     code("""
-r1 = check_ranked(scores_to_ranked_ids(predict_ranked(model, 1, members[1])))
+r1 = check_ranked(scores_to_ranked_ids(predict_scores(model, 1, members[1])))
 labels1 = np.load(DATA_DIR / 'tst_stim' / 'sub-01_tst_stim.npy')
 print('format check on sub-01:', r1.shape, r1.dtype, 'first row starts', r1[0, :5])
 print('score with sub-01 answers:', evaluate(r1, labels1))
@@ -220,7 +219,7 @@ print('score with sub-01 answers:', evaluate(r1, labels1))
     code("""
 SUBMISSION_DIR.mkdir(exist_ok=True)
 for sub in (5, 6):
-    ranked = check_ranked(scores_to_ranked_ids(predict_ranked(model, sub, members[sub])))
+    ranked = check_ranked(scores_to_ranked_ids(predict_scores(model, sub, members[sub])))
     path = save_submission(ranked, f'sub-{sub:02d}', SUBMISSION_DIR)
     back = check_ranked(np.load(path))
     print(path, back.shape, back.dtype, 'row 0 top-5:', back[0, :5])
