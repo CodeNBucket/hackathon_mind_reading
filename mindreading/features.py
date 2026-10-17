@@ -5,9 +5,6 @@ Each extractor returns a dict of arrays whose first axis is the video (same orde
 lowlevel   no model. Time courses at 10 Hz over the 3 s (30 bins): brightness, contrast,
            colour saturation, motion (frame difference), edge energy, scene-cut strength,
            audio loudness (RMS, dB) and audio spectral flux (sound onsets).
-clip_l14   CLIP ViT-L/14 on 16 frames (every ~0.19 s). Projected 768-d embedding per frame,
-           plus the CLS token of vision layers 6/12/18/24 (early = edges/textures,
-           late = objects/scenes).
 videomae   VideoMAE (Kinetics-400 actions) on 16 frames: mean-pooled hidden state of
            layers 4/8/12 (768-d each). Captures motion and actions.
 ast        Audio Spectrogram Transformer (AudioSet sound events) on the 3 s soundtrack:
@@ -28,7 +25,6 @@ REVISIONS = {
     "clip_b32": "3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268",   # openai/clip-vit-base-patch32
     "videomae": "488eb9a0565f257b32866000305c8178965eb9f6",   # MCG-NJU/videomae-base-finetuned-kinetics
     "ast": "f826b80d28226b62986cc218e5cec390b1096902",        # MIT/ast-finetuned-audioset-10-10-0.4593
-    "clip_l14": "32bd64288804d66eefd0ccbe215aa642df71cc41",   # openai/clip-vit-large-patch14 (tested, unused)
 }
 DURATION = 3.0
 
@@ -150,30 +146,6 @@ def _device():
     return "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def extract_clip_l14(n_frames=16, layers=(6, 12, 18, 24)):
-    import torch
-    from transformers import CLIPModel, CLIPProcessor
-    name, rev = "openai/clip-vit-large-patch14", REVISIONS["clip_l14"]
-    dev = _device()
-    model = CLIPModel.from_pretrained(name, revision=rev, torch_dtype=torch.float16 if dev == "cuda" else torch.float32).to(dev).eval()
-    proc = CLIPProcessor.from_pretrained(name, revision=rev)
-    t_list = np.linspace(0, DURATION - 0.05, n_frames)
-
-    @torch.no_grad()
-    def one(vid):
-        frames, t = read_video(video_path(vid))
-        imgs = list(frames_at(frames, t, t_list))
-        px = proc(images=imgs, return_tensors="pt")["pixel_values"].to(dev, model.dtype)
-        vo = model.vision_model(pixel_values=px, output_hidden_states=True)
-        emb = model.visual_projection(vo.pooler_output)
-        emb = emb / emb.norm(dim=-1, keepdim=True)
-        cls = torch.stack([vo.hidden_states[l][:, 0] for l in layers], 1)   # (frames, layers, 1024)
-        return {"embed": emb.float().cpu().numpy().astype(np.float16),
-                "cls": cls.float().cpu().numpy().astype(np.float16)}
-
-    return cached("clip_l14", one)
-
-
 def extract_videomae(layers=(4, 8, 12)):
     import torch
     from transformers import VideoMAEImageProcessor, VideoMAEModel
@@ -212,5 +184,4 @@ def extract_ast(layers=(4, 8, 12)):
     return cached("ast", one)
 
 
-EXTRACTORS = {"lowlevel": extract_lowlevel, "clip_l14": extract_clip_l14,
-              "videomae": extract_videomae, "ast": extract_ast}
+EXTRACTORS = {"lowlevel": extract_lowlevel, "videomae": extract_videomae, "ast": extract_ast}
