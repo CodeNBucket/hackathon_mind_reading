@@ -36,7 +36,7 @@ ALPHAS = np.logspace(-3, 7, 21)   # ridge strengths to choose from
 BLOCKS = {
     "clip": ("clip_b32", "mean", None, None),                        # CLIP, 8 frames averaged
     "mae":  ("videomae", "layers", None, 128),                       # VideoMAE layers 4/8/12
-    "low":  ("lowlevel", "timecourse", lambda a: a[:, :12], None),   # time courses, 0-1.2 s
+    "low":  ("lowlevel", "timecourse", lambda a: a[:, :10], None),   # time courses, 0-1.0 s (= EEG window)
     "ast4": ("ast", "layers", lambda a: a[:, 0], 128),               # AST audio, layer 4
 }
 
