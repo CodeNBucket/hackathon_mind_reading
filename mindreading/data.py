@@ -8,12 +8,12 @@ from pathlib import Path
 
 import numpy as np
 
-from .config import DATA_DIR
+from .config import DATA_DIR, check_data_dir
 
 
 def load_train(sub: int, data_dir: Path = DATA_DIR):
     """Returns (video_ids [n], eeg [n, 17, 1500]) sorted by video id."""
-    z = np.load(Path(data_dir) / "trn" / f"sub-{sub:02d}_trn.npz")
+    z = np.load(check_data_dir(data_dir) / "trn" / f"sub-{sub:02d}_trn.npz")
     ids = np.array(sorted(z.files, key=int), dtype=int)
     eeg = np.stack([z[str(i)] for i in ids]).astype(np.float32)
     return ids, eeg
@@ -21,7 +21,7 @@ def load_train(sub: int, data_dir: Path = DATA_DIR):
 
 def load_test(sub: int, data_dir: Path = DATA_DIR):
     """Returns (eeg [102, 17, 1500] in the original shuffled order, labels [102] or None)."""
-    eeg = np.load(Path(data_dir) / "tst" / f"sub-{sub:02d}_tst.npy").astype(np.float32)
+    eeg = np.load(check_data_dir(data_dir) / "tst" / f"sub-{sub:02d}_tst.npy").astype(np.float32)
     stim = Path(data_dir) / "tst_stim" / f"sub-{sub:02d}_tst_stim.npy"
     labels = np.load(stim).astype(int) if stim.exists() else None
     return eeg, labels
@@ -29,4 +29,4 @@ def load_test(sub: int, data_dir: Path = DATA_DIR):
 
 def video_path(video_id: int, data_dir: Path = DATA_DIR) -> Path:
     folder = "stimuli_train" if video_id <= 1000 else "stimuli_test"
-    return Path(data_dir) / folder / f"{video_id:04d}.mp4"
+    return check_data_dir(data_dir) / folder / f"{video_id:04d}.mp4"

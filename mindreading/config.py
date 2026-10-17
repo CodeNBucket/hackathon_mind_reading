@@ -4,10 +4,21 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 
-# Organiser data (never committed). Override with the MINDREADING_DATA environment variable.
-DATA_DIR = Path(os.environ.get(
-    "MINDREADING_DATA",
-    r"C:\Users\canbe\Desktop\eeg-mind-reading-challenge\eeg-mind-reading-challenge"))
+# Organiser data (never committed): put it in data/ inside the repo (folders trn/, tst/,
+# tst_stim/, stimuli_train/, stimuli_test/), or point the MINDREADING_DATA environment
+# variable at the folder that contains them.
+DATA_DIR = Path(os.environ.get("MINDREADING_DATA", REPO / "data"))
+
+
+def check_data_dir(data_dir=None):
+    """Stop with a clear message if the organisers' data is not where we expect it."""
+    d = Path(data_dir or DATA_DIR)
+    if not (d / "trn").is_dir():
+        raise FileNotFoundError(
+            f"Organiser data not found in {d}. Copy the challenge data (trn/, tst/, tst_stim/, "
+            f"stimuli_train/, stimuli_test/) into {REPO / 'data'}, or set the MINDREADING_DATA "
+            f"environment variable to the folder that contains them.")
+    return d
 
 CACHE_DIR = REPO / "cache"            # video features, preprocessed EEG (git-ignored)
 WEIGHTS_DIR = REPO / "weights"        # trained models (committed: required deliverable)

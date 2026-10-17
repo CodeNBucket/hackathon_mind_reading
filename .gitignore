@@ -7,7 +7,8 @@ __pycache__/
 # Downloaded model weights (re-downloaded automatically on first run)
 models/
 
-# Large raw datasets (EEG downloads etc.) - keep them local, not in git
+# The organisers' challenge data - keep it local, never in git
+/data/
 /data_raw/
 
 # Cached video features and intermediate arrays (rebuilt by run_all.py)
