@@ -84,29 +84,6 @@ No gain: a bigger image model does not explain the EEG better. Motion (VideoMAE)
 | 1 / 0 / 0.5 | 6.1% | 20.9% | 20.9 |
 | 1 / 0.5 / 0 | 6.1% | 20.8% | 20.5 |
 
-## Round 8: checks on the final model (17 Oct)
-| check | top-1 | top-5 | median rank |
-|---|---|---|---|
-| EEG sampling rate 25 / 50 / 100 / 200 / 250 / 500 Hz | 5.6–6.4% | 20.7–20.9% | 20.6–21.4 |
-| low-level window 0–1.0 / 0–1.2 / 0–3.0 s | 6.1% | 20.8–20.9% | 20.6–21.1 |
-| PCA size VideoMAE / AST 64–512, no PCA; PCA on CLIP | 5.8–6.4% | 20.7–20.9% | 20.3–21.3 |
-
-No differences beyond noise: 100 Hz, 0–1.2 s low-level and PCA 128 are kept.
-
-## Round 9: using the EEG after the first second
-| change | top-1 | top-5 | median rank |
-|---|---|---|---|
-| EEG window 0–1 s (current) | 6.1% | 20.9% | 20.7 |
-| EEG window 0–1.5 / 0–2 / 0–3 s | 5.4 / 4.9 / 3.8% | 19.2 / 16.8 / 14.4% | 22.6 / 24.9 / 29.2 |
-| only 1–2 s / only 2–3 s (alone) | 1.3 / 1.2% | 6.7 / 5.6% | 48.6 / 53.7 |
-| time-resolved model (TRF, lags 0–0.6 s; low-level + CLIP frames [+ windowed audio]) on 1–3 s, alone | 1.1–1.4% | 6.3–6.9% | 52–55 |
-| + TRF combined with the current model | 6.1–6.3% | 20.1–20.8% | 21.2–22.1 |
-| 1–3 s wave averaged in 0.25 / 0.5 s bins, combined | 6.0% | 20.1–20.5% | 21.1 |
-| **rhythm power (log band power, 5 bands, 0.5 s bins, 0–3 s), combined at weight 0.25** | **7.7%** | **24.4%** | **18.0** |
-| rhythm power other variants (1–3 s only, 4 bands, 1 s bins, weights 0.5–1.0) | 5.8–7.7% | 19.9–24.0% | 17.8–23.0 |
-
-After about 1 s the exact wave shape varies too much from viewing to viewing to be predicted (window, TRF and coarse-bin variants all fail). The slower brain "state", measured as the power of each rhythm, is predictable from the video and adds information. TRF (Crosse et al., 2016) is the standard method for continuous stimuli; here it stays weak.
-
 ## Milestone scores on the sub-01…04 test sets (102 candidates)
 | model | top-1 | top-5 | median rank |
 |---|---|---|---|
@@ -116,8 +93,5 @@ After about 1 s the exact wave shape varies too much from viewing to viewing to 
 | + whitening, low-level features | 14.0% | 37.0% | 10.1 |
 | + per-feature ridge strength | 13.7% | 36.5% | 9.1 |
 | + VideoMAE | 15.2% | 41.7% | 8.3 |
-| + member weights 1 / 0.25 / 0.25 | 16.7% | 46.1% | 6.3 |
-| **+ rhythm power, 0–3 s (final)** | **17.6%** | **45.6%** | **6.6** |
-| shuffled-label control (final model) | 0.7% | 3.2% | |
-
-On the test sets, rhythm power is neutral (+0.9 top-1, −0.5 top-5, within noise), although alone it scores 13.7% top-5 there (chance 4.9%). The test recordings are cleaner than the training recordings (test/train amplitude ratio ~0.65, consistent with averaging over more repetitions), so the wave model already dominates there. It was kept because the decision rule is the held-out training videos, where it adds +3.5 points.
+| **+ member weights 1 / 0.25 / 0.25 (final)** | **16.7%** | **46.1%** | **6.3** |
+| shuffled-label control (final model) | 0.7% | 2.7% | |
