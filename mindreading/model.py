@@ -1,6 +1,6 @@
 """The model: predict the EEG each video should cause, then rank videos by similarity.
 
-How it works (every choice validated on held-out *training* videos, see results/experiment_log.md):
+How it works (every choice validated on held-out *training* videos, see past_trials/experiment_log.md):
 
 1. Video features ("cards"): four blocks per video, each standardised on the training videos,
    optionally PCA-reduced, scaled to equal size, weighted, and concatenated:

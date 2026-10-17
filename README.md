@@ -7,11 +7,11 @@ Identify which 3-second video a person watched from their EEG. Hackathon project
 | Path | What it is |
 |---|---|
 | `BRIEF.md` | The official task, the data and the rules |
-| `run_all.py` | One command: runs the three notebooks in order |
-| `notebooks/` | `03_video_features`, `04_train_and_validate`, `05_predict_submission` |
-| `mindreading/` | The code the notebooks call (see "Code" below) |
-| `past_trials/` | The experiment code behind `results/experiment_log.md` (not needed to run the pipeline) |
-| `results/` | `experiment_log.md` (every experiment and its score) and `dev_test_scores.json` |
+| `run_all.py` | One command: runs our notebooks 03 → 04 → 05 |
+| `notebooks/` | `01`, `02`: the organisers' templates (reference). `03`, `04`, `05`: our pipeline |
+| `mindreading/` | The code our notebooks call (see "Code" below) |
+| `results/` | `dev_test_scores.json`: the scores |
+| `past_trials/` | How we chose the settings: `experiment_log.md` and the experiment code. Not needed to run anything |
 | `weights/` | The trained model (required deliverable) |
 | `submission/` | `sub-05_ranked_candidate_list.npy` and `sub-06_…`: what we hand in |
 | `requirements.txt` | Exact library versions (Python 3.11) |
@@ -39,13 +39,15 @@ py -3.11 -m venv .venv
 
 Set `MINDREADING_DATA` if the organisers' data isn't in the default folder (see `mindreading/config.py`). The first run takes about 1 hour, mostly extracting the video and audio features (cached in `cache/`). Later runs take about 2 minutes. A GPU speeds up feature extraction a lot; for that, install the CUDA build of torch, e.g. `pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cu130`.
 
-| Notebook | Like the organisers' | Does |
-|---|---|---|
-| `notebooks/03_video_features` | 01, frames + AlexNet | Stimulus features for all 1,102 videos: CLIP, VideoMAE, low-level time courses and audio (AST) |
-| `notebooks/04_train_and_validate` | 01, train + check | EEG preprocessing, the experiment log, validation on held-out *training* videos, the sub-01…04 test score, and a shuffled-label check |
-| `notebooks/05_predict_submission` | 02 | Trains the final model, saves `weights/`, checks the format on sub-01, writes `submission/sub-05/06_ranked_candidate_list.npy` |
+| Notebook | Does |
+|---|---|
+| `notebooks/01_preprocess_and_train_model` | Organisers' template, step 1 (AlexNet → PCA → ridge → predicted EEG). Reference only; needs `net2brain` and must run from the data folder |
+| `notebooks/02_predict_movies` | Organisers' template, step 2 (rank the 102 test videos). Reference only |
+| `notebooks/03_video_features` | Ours, replaces their feature step: CLIP, VideoMAE, low-level time courses and audio (AST) for all 1,102 videos |
+| `notebooks/04_train_and_validate` | Ours, replaces their training: EEG preprocessing, validation on held-out *training* videos, the sub-01…04 test score, and a shuffled-label check |
+| `notebooks/05_predict_submission` | Ours, replaces their notebook 02: trains the final model, saves `weights/`, checks the format on sub-01, writes `submission/sub-05/06_ranked_candidate_list.npy` |
 
-The notebooks only call the code in `mindreading/`. `past_trials/exp_eeg.py` and `past_trials/exp_combo.py` reproduce the experiments in the log; the pipeline doesn't need them.
+Our notebooks only call the code in `mindreading/`.
 
 ### Model
 
