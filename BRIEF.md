@@ -16,7 +16,7 @@ Task: given one EEG recording and a set of candidate videos, **rank the candidat
 | Verified recordings per subject | sub-01 968, sub-02 972, sub-03 961, sub-04 947, sub-05 952, sub-06 850. **695 training videos were recorded for all six subjects.** |
 | `tst/subXX_tst.npy` | array `102 × 17 × 1500`, one recording per test video, **in shuffled order** |
 | `tst_stim/subXX_tst_stim.npy` | the true video ids (1001–1102) in the same order as `tst`. **Only for `sub-01`…`sub-04`.** |
-| Local copy | `C:\Users\canbe\Desktop\eeg-mind-reading-challenge\eeg-mind-reading-challenge` (never committed) |
+| Local copy | `data/` inside the repo, or the folder named in the `MINDREADING_DATA` environment variable (never committed) |
 
 ## What we must submit
 
