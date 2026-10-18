@@ -28,7 +28,7 @@ from sklearn.preprocessing import StandardScaler
 
 from .config import CACHE_DIR, SEED, SUBJECTS, TEST_IDS, TRAIN_IDS
 from .data import load_test, load_train
-from .preprocess import band_power, prepare
+from .preprocess import prepare
 
 ALPHAS = np.logspace(-3, 7, 21)   # ridge strengths to choose from
 
@@ -36,7 +36,7 @@ ALPHAS = np.logspace(-3, 7, 21)   # ridge strengths to choose from
 BLOCKS = {
     "clip": ("clip_b32", "mean", None, None),                        # CLIP, 8 frames averaged
     "mae":  ("videomae", "layers", None, 128),                       # VideoMAE layers 4/8/12
-    "low":  ("lowlevel", "timecourse", lambda a: a[:, :10], None),   # time courses, 0-1.0 s (= EEG window)
+    "low":  ("lowlevel", "timecourse", lambda a: a[:, :12], None),   # time courses, 0-1.2 s
     "ast4": ("ast", "layers", lambda a: a[:, 0], 128),               # AST audio, layer 4
 }
 
@@ -84,7 +84,6 @@ class Config:
     whiten: float = 0.3                # channel whitening shrinkage (0 = off)
     members: tuple = ("subject", "pooled", "ga")
     member_weights: dict = field(default_factory=lambda: {"subject": 1.0, "pooled": 0.25, "ga": 0.25})
-    power_weight: float = 0.25         # weight of the rhythm-power member (0 = off)
     shuffle_labels: bool = False       # sanity check: wrong video per recording -> must score chance
 
 
@@ -125,23 +124,11 @@ class Model:
             self.eeg[sub] = (ids, x.reshape(len(x), -1))
         return self.eeg[sub]
 
-    def train_power(self, sub):
-        """Rhythm power (recordings x 17*5*6) for a subject's training file, same row order."""
-        key = ("power", sub)
-        if key not in self.eeg:
-            _, e = load_train(sub)
-            self.eeg[key] = band_power(e, self.cfg.whiten)
-        return self.eeg[key]
-
     def test_eeg(self, sub):
         """(EEG matrix 102 x 1700 in the file's original order, true ids or None)."""
         e, labels = load_test(sub)
         x = prepare(e, "set", self.cfg.tmin, self.cfg.tmax, self.cfg.car, self.cfg.whiten)
         return x.reshape(len(x), -1), labels
-
-    def test_power(self, sub):
-        e, _ = load_test(sub)
-        return band_power(e, self.cfg.whiten)
 
     # -------- training
     def _encoder(self, ids, Y):
@@ -169,25 +156,17 @@ class Model:
         return self
 
     def fit_subject(self, sub, fit_ids=None):
-        """The subject's own encoders: EEG wave (0-1 s) and, if enabled, rhythm power (0-3 s)."""
+        """The subject's own encoder."""
         ids, Y = self.train_eeg(sub)
         m = np.ones(len(ids), bool) if fit_ids is None else np.isin(ids, fit_ids)
-        out = {"subject": self._encoder(ids[m], Y[m])} if "subject" in self.cfg.members else {}
-        if self.cfg.power_weight:
-            out["power"] = self._encoder(ids[m], self.train_power(sub)[m])
-        return out
+        return {"subject": self._encoder(ids[m], Y[m])} if "subject" in self.cfg.members else {}
 
     # -------- scoring
-    def scores(self, members: dict, eeg, candidate_ids, power=None):
-        """{member: score matrix, 'wave': weighted wave members, 'ensemble': final}, each
-        (recordings x candidates). `power` = rhythm power of the same recordings."""
+    def scores(self, members: dict, eeg, candidate_ids):
+        """{member: score matrix, 'ensemble': weighted sum}, each (recordings x candidates)."""
         C = self.feats(candidate_ids)
-        per = {k: correlation_matrix(eeg, m.predict(C)) for k, m in members.items() if k != "power"}
-        per["wave"] = sum(self.cfg.member_weights.get(k, 1.0) * _rowz(s) for k, s in per.items())
-        per["ensemble"] = per["wave"]
-        if "power" in members and power is not None:
-            per["power"] = correlation_matrix(power, members["power"].predict(C))
-            per["ensemble"] = _rowz(per["wave"]) + self.cfg.power_weight * _rowz(per["power"])
+        per = {k: correlation_matrix(eeg, m.predict(C)) for k, m in members.items()}
+        per["ensemble"] = sum(self.cfg.member_weights.get(k, 1.0) * _rowz(s) for k, s in per.items())
         return per
 
 
@@ -220,8 +199,7 @@ def validate(cfg, seeds=(0, 1, 2), subjects=SUBJECTS, model=None):
             ids, Y = model.train_eeg(s)
             m = np.isin(ids, val_ids)
             cand = np.unique(ids[m])
-            P = model.train_power(s)[m] if cfg.power_weight else None
-            for k, sc in model.scores(members, Y[m], cand, P).items():
+            for k, sc in model.scores(members, Y[m], cand).items():
                 acc.setdefault(k, []).append(topk(sc, np.searchsorted(cand, ids[m])))
     return {k: {q: float(np.mean([r[q] for r in v])) for q in ("top1", "top5", "median_rank")}
             for k, v in acc.items()}
@@ -236,8 +214,7 @@ def dev_test(cfg, subjects=(1, 2, 3, 4), model=None):
     for s in subjects:
         members = {**model.fit_subject(s), **model.shared}
         eeg, labels = model.test_eeg(s)
-        P = model.test_power(s) if cfg.power_weight else None
-        res[s] = {k: topk(sc, labels - cand[0]) for k, sc in model.scores(members, eeg, cand, P).items()}
+        res[s] = {k: topk(sc, labels - cand[0]) for k, sc in model.scores(members, eeg, cand).items()}
     return res
 
 
@@ -251,5 +228,4 @@ def summarise(res):
 def predict_scores(model, sub, members):
     """Score matrix for a subject's test file: 102 recordings (original order) x 102 candidates."""
     eeg, _ = model.test_eeg(sub)
-    P = model.test_power(sub) if model.cfg.power_weight else None
-    return model.scores(members, eeg, np.array(TEST_IDS), P)["ensemble"]
+    return model.scores(members, eeg, np.array(TEST_IDS))["ensemble"]

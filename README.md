@@ -64,14 +64,13 @@ The same direction as the organisers' baseline (video → predicted EEG → comp
    |---|---|---|
    | CLIP ViT-B/32, 8 frames | 1.0 | Objects and scenes |
    | VideoMAE layers 4/8/12 | 0.6 | Motion and actions |
-   | Low-level time courses every 0.1 s over 0–1 s (same as the EEG window): brightness, contrast, saturation, motion, edges, scene cuts, loudness, sound onsets | 0.6 | Timing the early visual and auditory brain reacts to |
+   | Low-level time courses every 0.1 s: brightness, contrast, saturation, motion, edges, scene cuts, loudness, sound onsets | 0.6 | Timing the early visual and auditory brain reacts to |
    | AST layer 4 | 0.5 | What the sound is |
 3. **Encoders:**
    - Ridge regression from features to the 17 × 100 EEG.
    - A separate regularisation strength for every electrode × time point.
    - Three per subject: own data (weight 1), all 6 subjects (0.25), and the grand-average EEG over subjects (0.25).
-4. **Rhythm power (0–3 s):** a fourth encoder predicts how strong each brain rhythm (delta, theta, alpha, beta, low gamma) is per electrode in each 0.5 s bin. After about 1 s the exact wave shape is too variable to predict, but this slower brain state is not, so it uses the later 2 seconds of the recording. It is added to the wave score with weight 0.25.
-5. **Ranking:** correlation between the real EEG and each candidate's predicted EEG (wave and rhythm power).
+4. **Ranking:** correlation between the real EEG and each candidate's predicted EEG.
 
 Pretrained models (public, pinned to exact Hugging Face commits in `mindreading/features.py`):
 - `openai/clip-vit-base-patch32`
@@ -87,10 +86,9 @@ Trained weights: `weights/ensemble_encoders.joblib`.
 | chance | 1.0% | 4.9% | 51.5 |
 | organisers' baseline (AlexNet) | ~4% | 11.7% | |
 | first version: CLIP + ridge | 5.1% | 23.3% | 18.3 |
-| wave model only (0–1 s) | 16.7% | 46.1% | 6.3 |
-| **final model (+ rhythm power 0–3 s)** | **18.6%** | **46.1%** | **6.5** |
-| shuffled-label control | 0.7% | 3.2% | |
+| **final model** | **16.7%** | **46.1%** | **6.3** |
+| shuffled-label control | 0.7% | 2.7% | |
 
-Per subject, final model (top-1 / top-5): sub-01 20.6 / 48.0, sub-02 17.6 / 44.1, sub-03 14.7 / 47.1, sub-04 21.6 / 45.1. On held-out training videos, rhythm power adds about +4 points top-5 (20.9% → 24.7%). On the test sets it adds +1.9 points top-1 at the same top-5; see `past_trials/experiment_log.md`, rounds 9–10.
+Per subject (top-1 / top-5): sub-01 19.6 / 50.0, sub-02 16.7 / 42.2, sub-03 14.7 / 51.0, sub-04 15.7 / 41.2.
 
 All settings were chosen on held-out *training* videos (3 random splits averaged). The sub-01…04 test answers were only used to report these scores, never to choose anything and never for sub-05/06.
