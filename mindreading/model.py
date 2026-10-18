@@ -11,7 +11,9 @@ How it works (every choice validated on held-out *training* videos, see past_tri
 2. EEG: 100 Hz, channel whitening, z-score per file, 0-1 s after video onset (preprocess.py),
    plus rhythm power (log band power, 5 bands x 0.5-s bins over 0-3 s).
 3. Two kinds of encoder from the video features to the EEG wave (17 electrodes x 100 points):
-       ridge        ridge regression, its own regularisation strength per electrode x time point
+       ridge        ridge regression, its own regularisation strength per electrode x time point;
+                with Config.banded on, "banded ridge": each encoder also learns its own strength
+                per feature block (clip / mae / low / ast4) on an inner split of its own videos
        contrastive  neural network trained for ranking (encoders.py), 3 seeds averaged
 4. Three encoders of each kind per subject, scores added with weights:
        subject (1.0)  trained on that subject's own training recordings
@@ -94,6 +96,8 @@ class Config:
     power_weight: float = 0.25         # weight of the rhythm-power member (0 = off)
     contrastive_weight: float = 2.0    # weight of the contrastive-network ensemble vs ridge (0 = off)
     contrastive_seeds: int = 3         # networks averaged per contrastive member
+    banded: bool = False               # banded ridge: every ridge encoder learns its own per-block
+                                       # strength (BandedEncoder); False = the shared weights above only
     colnorm: bool = True               # rank by the per-candidate normalised score (step 6); the
                                        # 'colnorm' and 'raw' scores are always reported side by side
     shuffle_labels: bool = False       # sanity check: wrong video per recording -> must score chance
@@ -109,6 +113,59 @@ class Encoder:
 
     def predict(self, V):
         return self.ridge.predict(V - self.mu)
+
+
+BANDED_MULTS = (0.5, 2.0)   # tried for each block, relative to its current scale
+BANDED_INNER = 0.2          # share of an encoder's own training videos used to choose the scales
+
+
+class BandedEncoder(Encoder):
+    """Banded ridge (Nunez-Elizalde et al., 2019): each feature block gets its own regularisation.
+    Scaling a block's columns by s before ridge = giving that block its own strength alpha / s^2.
+    The scales are chosen on an inner split of THIS encoder's own training videos (20%, by video):
+    start at 1 (= Config.blocks weights), try x0.5 and x2 per block, keep what ranks the inner
+    held-out videos best (mean percentile rank of the true video). The per-electrode x time-point
+    ridge strength (RidgeCV) is kept. The scales are folded into the coefficients after fitting,
+    so prediction and saved weights look exactly like a plain Encoder."""
+
+    def __init__(self, slices):
+        self.slices = slices                     # {block: slice of feature columns}
+
+    def _cols(self, scales, n):
+        c = np.ones(n, np.float32)
+        for b, sl in self.slices.items():
+            c[sl] = scales[b]
+        return c
+
+    def fit(self, V, Y, ids):
+        ids = np.asarray(ids)
+        vids = np.unique(ids)
+        rng = np.random.default_rng(SEED + len(ids))
+        va = np.isin(ids, rng.choice(vids, max(2, int(len(vids) * BANDED_INNER)), replace=False))
+        cand, first = np.unique(ids[va], return_index=True)
+        Vc = V[np.flatnonzero(va)[first]]        # one feature row per inner held-out video
+        true_cols = np.searchsorted(cand, ids[va])
+
+        def score(scales):
+            c = self._cols(scales, V.shape[1])
+            S = correlation_matrix(Y[va], Encoder().fit(V[~va] * c, Y[~va]).predict(Vc * c))
+            true = S[np.arange(len(S)), true_cols]
+            return float(((S < true[:, None]).sum(1) / max(1, S.shape[1] - 1)).mean())
+
+        best = {b: 1.0 for b in self.slices}
+        best_score = score(best)
+        for b in self.slices:                    # one coordinate pass over the blocks
+            for m in BANDED_MULTS:
+                trial = {**best, b: best[b] * m}
+                sc = score(trial)
+                if sc > best_score:
+                    best, best_score = trial, sc
+        self.scales = best
+        c = self._cols(best, V.shape[1])
+        super().fit(V * c, Y)
+        self.ridge.coef_ = self.ridge.coef_ * c  # fold the scales in: predict(V) works unscaled
+        self.mu = V.mean(0)
+        return self
 
 
 def _rowz(a):
@@ -161,7 +218,15 @@ class Model:
         if kind == "contrastive":
             from .encoders import SeedAverage
             return SeedAverage(self.cfg.contrastive_seeds).fit(self.feats(ids), Y, np.asarray(ids))
+        if self.cfg.banded:
+            return BandedEncoder(self._block_slices()).fit(self.feats(ids), Y, np.asarray(ids))
         return Encoder().fit(self.feats(ids), Y)
+
+    def _block_slices(self):
+        """{block: slice of the concatenated feature columns}, in VideoFeatures order."""
+        sizes = [len(next(iter(self.feats.tables[b].values()))) for b in self.feats.blocks]
+        edges = np.cumsum([0] + sizes)
+        return {b: slice(int(edges[i]), int(edges[i + 1])) for i, b in enumerate(self.feats.blocks)}
 
     def _kinds(self):
         return ("ridge", "contrastive") if self.cfg.contrastive_weight else ("ridge",)

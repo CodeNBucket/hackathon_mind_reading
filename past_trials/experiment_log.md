@@ -204,6 +204,39 @@ Same splits and test sets for every version. Script: `task8_branch_comparison.py
 
 Column normalisation improves the overnight model on both the fresh splits and the test sets, so the column-normalisation branch was merged and `Config.colnorm` stays on.
 
+## Round 19: column normalisation ("hubness" fix), choosing the method (splits 0–2)
+Some candidate videos score high with almost every recording ("hubs") and crowd the top-5. Fix: z-score each candidate's score column. The open question is where each candidate's "usual" score comes from.
+
+Ridge wave members only (before rhythm power):
+| method | top-1 | top-5 | median rank | top-5 gain per split |
+|---|---|---|---|---|
+| none | 6.1% | 20.9% | 20.6 | |
+| col: z-score over the other test recordings | 6.8% | 22.8% | 20.0 | +0.4 / +3.1 / +2.0 |
+| rowcol: alternate column and row z-scoring | 6.8% | 22.7% | 20.0 | +0.2 / +3.4 / +1.7 |
+| csls (Conneau et al., 2018), k = 10 | 6.5% | 22.5% | 20.1 | +1.9 / +1.6 / +1.1 |
+| **col_train: z-score over the subject's TRAINING recordings** | **7.0%** | **23.1%** | 20.6 | **+1.1 / +3.7 / +1.7** |
+
+col, rowcol and csls need all test recordings at once. That does not fit the brief's pipeline ("given an EEG recording ... ranks the videos") and is close to, but not literally, rule 5 ("unsupervised normalization of the test recordings"). col_train uses training data only, ranks one recording at a time, and scored best, so it is the one implemented (`Config.colnorm`, `Model.colnorm_stats`).
+
+With rhythm power (ridge + power, before the contrastive encoder):
+| method | top-1 | top-5 | median rank | top-1 gain per split | top-5 gain per split |
+|---|---|---|---|---|---|
+| raw | 7.6% | 24.7% | 18.1 | | |
+| **colnorm (col_train)** | **8.6%** | 24.7% | **17.7** | **+0.4 / +1.4 / +1.2** | −0.4 / +0.7 / −0.5 |
+| col over test recordings (comparison only) | 8.0% | 25.4% | 17.2 | −0.1 / +0.6 / +0.7 | +0.3 / +0.6 / +1.1 |
+
+With rhythm power the top-5 gain disappears and a consistent top-1 gain (+1.0) remains: the power member already absorbs part of the hub effect (a hub must now look good on two independent kinds of evidence). sub-01…04 test sets (report only): top-1 18.6 → 16.9%, top-5 46.1 → 48.5% (n = 408, within noise). On the final model (round 18, 5 fresh splits) it adds +0.3 top-1 / +0.7 top-5 and was kept on. Script: `exp_colnorm.py`.
+
+## Round 20: banded ridge, learning the block weights per encoder (full model, splits 0–2)
+Instead of one hand-picked weight per feature block shared by all encoders, every ridge encoder (subject, pooled, grand average, rhythm power) learns its own scale per block (Nunez-Elizalde et al., 2019; scaling a block by s = giving it its own ridge strength alpha / s²). Scales are chosen on a 20% inner split of the encoder's own training videos (by video), coordinate search ×0.5 / ×2 from the current weights; the per-target ridge strength is kept.
+
+| encoder weights | top-1 | top-5 | median rank | top-1 gain per split | top-5 gain per split |
+|---|---|---|---|---|---|
+| **hand-tuned, shared (kept)** | **9.0%** | **26.0%** | **16.8** | | |
+| banded ridge | 8.3% | 25.4% | 17.1 | −0.8 / −0.9 / −0.4 | −1.0 / −0.7 / −0.1 |
+
+Worse on every split and ~7× slower (≈450 s vs 60–140 s per split). The hand-tuned weights were already searched (round 13) and re-checked (round 16); choosing 4 scales per encoder on ~130–170 inner videos mostly adds selection noise. The learned scales (geometric mean over encoders) confirm the hand tuning: VideoMAE ×1.18 (motion matters most), AST ×0.72 (audio least), CLIP ×0.92, low-level ×0.94. Kept off (`Config.banded = False`, `BandedEncoder` stays in `model.py` as a tested option). Script: `exp_banded.py`, results in `results/banded.json`.
+
 ## Milestone scores on the sub-01…04 test sets (102 candidates)
 | model | top-1 | top-5 | median rank |
 |---|---|---|---|

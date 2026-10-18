@@ -1,0 +1,355 @@
+{
+ "fast": true,
+ "rows": [
+  {
+   "banded": false,
+   "seed": 0,
+   "top1": 0.08812566996347097,
+   "top5": 0.26812743539231493,
+   "median_rank": 15.75
+  },
+  {
+   "banded": true,
+   "seed": 0,
+   "top1": 0.08012056564987051,
+   "top5": 0.25818113075041743,
+   "median_rank": 16.0
+  },
+  {
+   "banded": false,
+   "seed": 1,
+   "top1": 0.08830759894398856,
+   "top5": 0.2613080068165042,
+   "median_rank": 16.5
+  },
+  {
+   "banded": true,
+   "seed": 1,
+   "top1": 0.07893622948400193,
+   "top5": 0.25433783211329886,
+   "median_rank": 16.75
+  },
+  {
+   "banded": false,
+   "seed": 2,
+   "top1": 0.0925804508024103,
+   "top5": 0.250527407721301,
+   "median_rank": 18.0
+  },
+  {
+   "banded": true,
+   "seed": 2,
+   "top1": 0.08892479560465578,
+   "top5": 0.24916593892382932,
+   "median_rank": 18.666666666666668
+  }
+ ],
+ "mean_scale": {
+  "clip": 0.9207953040049319,
+  "ast4": 0.718873348722509,
+  "low": 0.9361177424536049,
+  "mae": 1.1794344488973643
+ },
+ "start_weights": {
+  "clip": 1.0,
+  "ast4": 0.5,
+  "low": 0.6,
+  "mae": 1.0
+ },
+ "learned_scales": [
+  {
+   "encoder": "subject",
+   "clip": 1.0,
+   "ast4": 0.5,
+   "low": 2.0,
+   "mae": 1.0
+  },
+  {
+   "encoder": "power",
+   "clip": 1.0,
+   "ast4": 1.0,
+   "low": 0.5,
+   "mae": 2.0
+  },
+  {
+   "encoder": "pooled",
+   "clip": 1.0,
+   "ast4": 2.0,
+   "low": 1.0,
+   "mae": 1.0
+  },
+  {
+   "encoder": "ga",
+   "clip": 1.0,
+   "ast4": 2.0,
+   "low": 1.0,
+   "mae": 1.0
+  },
+  {
+   "encoder": "subject",
+   "clip": 0.5,
+   "ast4": 1.0,
+   "low": 1.0,
+   "mae": 1.0
+  },
+  {
+   "encoder": "power",
+   "clip": 1.0,
+   "ast4": 0.5,
+   "low": 2.0,
+   "mae": 1.0
+  },
+  {
+   "encoder": "subject",
+   "clip": 1.0,
+   "ast4": 1.0,
+   "low": 0.5,
+   "mae": 1.0
+  },
+  {
+   "encoder": "power",
+   "clip": 1.0,
+   "ast4": 0.5,
+   "low": 0.5,
+   "mae": 1.0
+  },
+  {
+   "encoder": "subject",
+   "clip": 1.0,
+   "ast4": 0.5,
+   "low": 1.0,
+   "mae": 1.0
+  },
+  {
+   "encoder": "power",
+   "clip": 0.5,
+   "ast4": 0.5,
+   "low": 0.5,
+   "mae": 1.0
+  },
+  {
+   "encoder": "subject",
+   "clip": 1.0,
+   "ast4": 0.5,
+   "low": 0.5,
+   "mae": 1.0
+  },
+  {
+   "encoder": "power",
+   "clip": 1.0,
+   "ast4": 0.5,
+   "low": 0.5,
+   "mae": 2.0
+  },
+  {
+   "encoder": "subject",
+   "clip": 1.0,
+   "ast4": 1.0,
+   "low": 1.0,
+   "mae": 1.0
+  },
+  {
+   "encoder": "power",
+   "clip": 1.0,
+   "ast4": 0.5,
+   "low": 0.5,
+   "mae": 2.0
+  },
+  {
+   "encoder": "subject",
+   "clip": 1.0,
+   "ast4": 0.5,
+   "low": 0.5,
+   "mae": 1.0
+  },
+  {
+   "encoder": "power",
+   "clip": 0.5,
+   "ast4": 0.5,
+   "low": 0.5,
+   "mae": 2.0
+  },
+  {
+   "encoder": "pooled",
+   "clip": 1.0,
+   "ast4": 1.0,
+   "low": 2.0,
+   "mae": 1.0
+  },
+  {
+   "encoder": "ga",
+   "clip": 0.5,
+   "ast4": 0.5,
+   "low": 0.5,
+   "mae": 1.0
+  },
+  {
+   "encoder": "subject",
+   "clip": 2.0,
+   "ast4": 1.0,
+   "low": 2.0,
+   "mae": 1.0
+  },
+  {
+   "encoder": "power",
+   "clip": 0.5,
+   "ast4": 0.5,
+   "low": 0.5,
+   "mae": 2.0
+  },
+  {
+   "encoder": "subject",
+   "clip": 2.0,
+   "ast4": 1.0,
+   "low": 2.0,
+   "mae": 1.0
+  },
+  {
+   "encoder": "power",
+   "clip": 1.0,
+   "ast4": 0.5,
+   "low": 0.5,
+   "mae": 1.0
+  },
+  {
+   "encoder": "subject",
+   "clip": 0.5,
+   "ast4": 0.5,
+   "low": 2.0,
+   "mae": 1.0
+  },
+  {
+   "encoder": "power",
+   "clip": 0.5,
+   "ast4": 1.0,
+   "low": 1.0,
+   "mae": 1.0
+  },
+  {
+   "encoder": "subject",
+   "clip": 0.5,
+   "ast4": 0.5,
+   "low": 2.0,
+   "mae": 2.0
+  },
+  {
+   "encoder": "power",
+   "clip": 1.0,
+   "ast4": 0.5,
+   "low": 0.5,
+   "mae": 2.0
+  },
+  {
+   "encoder": "subject",
+   "clip": 2.0,
+   "ast4": 1.0,
+   "low": 2.0,
+   "mae": 2.0
+  },
+  {
+   "encoder": "power",
+   "clip": 1.0,
+   "ast4": 0.5,
+   "low": 0.5,
+   "mae": 1.0
+  },
+  {
+   "encoder": "subject",
+   "clip": 2.0,
+   "ast4": 1.0,
+   "low": 2.0,
+   "mae": 1.0
+  },
+  {
+   "encoder": "power",
+   "clip": 0.5,
+   "ast4": 0.5,
+   "low": 2.0,
+   "mae": 2.0
+  },
+  {
+   "encoder": "pooled",
+   "clip": 0.5,
+   "ast4": 1.0,
+   "low": 2.0,
+   "mae": 1.0
+  },
+  {
+   "encoder": "ga",
+   "clip": 0.5,
+   "ast4": 0.5,
+   "low": 1.0,
+   "mae": 1.0
+  },
+  {
+   "encoder": "subject",
+   "clip": 2.0,
+   "ast4": 0.5,
+   "low": 1.0,
+   "mae": 1.0
+  },
+  {
+   "encoder": "power",
+   "clip": 2.0,
+   "ast4": 1.0,
+   "low": 0.5,
+   "mae": 1.0
+  },
+  {
+   "encoder": "subject",
+   "clip": 0.5,
+   "ast4": 1.0,
+   "low": 2.0,
+   "mae": 1.0
+  },
+  {
+   "encoder": "power",
+   "clip": 1.0,
+   "ast4": 1.0,
+   "low": 0.5,
+   "mae": 1.0
+  },
+  {
+   "encoder": "subject",
+   "clip": 0.5,
+   "ast4": 1.0,
+   "low": 1.0,
+   "mae": 1.0
+  },
+  {
+   "encoder": "power",
+   "clip": 1.0,
+   "ast4": 0.5,
+   "low": 0.5,
+   "mae": 2.0
+  },
+  {
+   "encoder": "subject",
+   "clip": 2.0,
+   "ast4": 1.0,
+   "low": 2.0,
+   "mae": 1.0
+  },
+  {
+   "encoder": "power",
+   "clip": 1.0,
+   "ast4": 0.5,
+   "low": 0.5,
+   "mae": 2.0
+  },
+  {
+   "encoder": "subject",
+   "clip": 2.0,
+   "ast4": 1.0,
+   "low": 2.0,
+   "mae": 0.5
+  },
+  {
+   "encoder": "power",
+   "clip": 1.0,
+   "ast4": 1.0,
+   "low": 1.0,
+   "mae": 1.0
+  }
+ ]
+}
