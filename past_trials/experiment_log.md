@@ -204,6 +204,18 @@ Same splits and test sets for every version. Script: `task8_branch_comparison.py
 
 Column normalisation improves the overnight model on both the fresh splits and the test sets, so the column-normalisation branch was merged and `Config.colnorm` stays on.
 
+## Round 21: which AST (audio model) layer does the EEG follow? (audio features alone, splits 0–2)
+For the brain-vs-AI question: does scalp EEG match the audio model's middle layer (sound texture, rhythm) better than its last layer (abstract sound categories)? Audio block alone (PCA 128), ridge + rhythm power + column normalisation, contrastive network off.
+
+| AST layer | top-1 | top-5 | median rank | top-5 vs layer 4 per split |
+|---|---|---|---|---|
+| **layer 4 (kept)** | **2.3%** | **9.5%** | **40.7** | |
+| layer 8 | 2.0% | 9.8% | 38.6 | −0.5 / −0.2 / +1.8 |
+| layer 12 (last) | 2.0% | 9.8% | 38.4 | −0.8 / +0.5 / +1.3 |
+| layers 4 + 8 + 12 | 2.1% | 10.7% | 37.1 | +0.4 / +0.7 / +2.5 |
+
+Audio alone carries real information (~10% top-5, chance ≈ 3.3% with ~150 candidates), but no layer is better than another on both metrics: scalp EEG does not separate the audio model's processing stages (unlike vision, where CLIP-L/14's intermediate layers beat its final embedding, round 6). All three layers together raise top-5 slightly on every split but not top-1; with audio a small part of the full model, layer 4 is kept. Script: `exp_ast_layers.py`, results in `results/ast_layers.json`.
+
 ## Milestone scores on the sub-01…04 test sets (102 candidates)
 | model | top-1 | top-5 | median rank |
 |---|---|---|---|
