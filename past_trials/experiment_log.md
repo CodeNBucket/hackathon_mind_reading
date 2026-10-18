@@ -117,6 +117,50 @@ After about 1 s the exact wave shape varies too much from viewing to viewing to 
 
 The EMD paper reports that video-feature encoding of single EEG time points is significant up to ~1.5 s. Adding 1.0–1.5 s to the wave window still lowers the ranking score, so the wave stays at 0–1 s and the later part is used through rhythm power. Low-level features now cover 0–1.0 s, the same as the EEG wave window.
 
+## Round 11 (overnight, 17–18 Oct): Task 1, train/test scale
+Test recordings have ~35% lower amplitude than training recordings for all 6 subjects (std ratio 0.62–0.68). The ratio is 0.93 right after onset and 0.52 late in the trial, so the signal is the same and only the noise is lower: test videos were shown 24 times vs 6 for training videos (EMD paper). After our preprocessing both are at std ≈ 1 (0.88–1.05), and correlation scoring is scale-invariant per recording. Handled; no change. Script: `task1_scale.py`.
+
+## Round 12: Task 2, dimensionality reduction of VideoMAE and AST (final model with rhythm power)
+| reduction (VideoMAE / AST) | top-1 | top-5 | median rank |
+|---|---|---|---|
+| **PCA 128 / 128 (kept)** | **7.6%** | **24.7%** | **18.1** |
+| PCA 64 / 64 | 7.0% | 24.3% | 18.3 |
+| PCA 256 / 256 | 7.5% | 23.8% | 18.1 |
+| PCA 512 / 512 | 7.3% | 23.7% | 18.9 |
+| no reduction (2304 / 768) | 6.9% | 23.4% | 17.9 |
+| random projection 128 / 128 | 7.3% | 22.6% | 19.4 |
+
+Script: `task2_pca.py`.
+
+## Round 13: Task 3, block weights and rhythm-power weight (coordinate search, 2 passes)
+Only one change improved top-5 by ≥0.5 points: VideoMAE weight 0.6 → 1.5 (top-1 7.8%, top-5 25.8%, median 17.6). CLIP 0.5/1.5, low-level 0.3/1.0, AST 0.25/0.8 and power 0.15/0.35 did not. Script: `task3_weights.py`, all trials in `task3_weights_result.json`.
+
+## Round 14: Task 4, replacing / complementing the ridge encoder
+| EEG-wave encoder | top-1 | top-5 | median rank |
+|---|---|---|---|
+| ridge (baseline) | 7.6% | 24.7% | 18.1 |
+| kernel ridge, RBF, α = 1 / 0.1 | 5.9 / 5.1% | 22.7 / 19.6% | 19.8 / 24.4 |
+| ridge + residual MLP (MSE) | 7.7% | 24.3% | 18.0 |
+| **contrastive MLP (InfoNCE on correlation, ridge-initialised)** | **8.3%** | **26.1%** | **16.0** |
+| ridge + 1.0 × contrastive | 8.9% | 26.8% | 15.4 |
+| ridge + kernel / residual MLP ensembles | 6.8–7.6% | 22.9–24.4% | 17.9–19.2 |
+
+Script: `task4_encoders.py`.
+
+## Round 15: Task 4b, refining the contrastive encoder (VideoMAE weight 1.5)
+| variant | top-1 | top-5 | median rank |
+|---|---|---|---|
+| ridge only, VideoMAE 1.5 | 7.8% | 25.8% | 17.6 |
+| contrastive τ 0.05 | 8.8% | 28.3% | 15.1 |
+| contrastive τ 0.1 | 8.6% | 27.6% | 15.7 |
+| contrastive hidden 2048 | 8.7% | 27.9% | 15.0 |
+| contrastive, 3 seeds averaged | 9.0% | 28.3% | 14.9 |
+| ridge + 1.0 × contrastive (τ 0.05) | 8.8% | 27.9% | 15.9 |
+| ridge + 2.0 × contrastive (τ 0.05) | 9.2% | 28.0% | 15.3 |
+| **ridge + 2.0 × contrastive, 3 seeds (chosen)** | **8.8%** | **28.5%** | **15.2** |
+
+On the sub-01…04 test sets (report only): **20.8% top-1, 50.7% top-5, median rank 5.2** (ridge part alone: 16.9% / 45.1%). Per subject top-1 / top-5: sub-01 25.5 / 54.9, sub-02 22.5 / 46.1, sub-03 12.7 / 48.0, sub-04 22.5 / 53.9. Shuffled-label control: 1.0% / 4.9% (chance). Script: `task5_contrastive.py`.
+
 ## Milestone scores on the sub-01…04 test sets (102 candidates)
 | model | top-1 | top-5 | median rank |
 |---|---|---|---|
@@ -128,7 +172,8 @@ The EMD paper reports that video-feature encoding of single EEG time points is s
 | + VideoMAE | 15.2% | 41.7% | 8.3 |
 | + member weights 1 / 0.25 / 0.25 | 16.7% | 46.1% | 6.3 |
 | + rhythm power, 0–3 s | 17.6% | 45.6% | 6.6 |
-| **+ low-level window 0–1.0 s (final, branch rhythm-power)** | **18.6%** | **46.1%** | **6.5** |
+| + low-level window 0–1.0 s | 18.6% | 46.1% | 6.5 |
+| **+ contrastive encoder (3 seeds, weight 2) + VideoMAE weight 1.5 (branch overnight-experiments)** | **20.8%** | **50.7%** | **5.2** |
 | shuffled-label control (final model) | 0.7% | 3.2% | |
 
 On the test sets, rhythm power is neutral (+0.9 top-1, −0.5 top-5, within noise), although alone it scores 13.7% top-5 there (chance 4.9%). The test recordings are cleaner than the training recordings (test/train amplitude ratio ~0.65, consistent with averaging over more repetitions), so the wave model already dominates there. It was kept because the decision rule is the held-out training videos, where it adds +3.5 points.

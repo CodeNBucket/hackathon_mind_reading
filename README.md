@@ -27,6 +27,7 @@ Identify which 3-second video a person watched from their EEG. Hackathon project
 | `features.py` | Videos → VideoMAE, low-level time courses and AST audio features |
 | `preprocess.py` | EEG: 100 Hz, channel whitening, z-scoring, 0–1 s window |
 | `model.py` | The model: video features → predicted EEG, 3 encoders per subject, scoring, validation |
+| `encoders.py` | The contrastive neural-network encoder (trained for ranking) |
 | `ranking.py` | Scores → the 102 × 102 submission format, plus the format checker |
 
 ## Pipeline (runs end to end)
@@ -37,7 +38,7 @@ py -3.11 -m venv .venv
 .venv\Scripts\python.exe run_all.py
 ```
 
-**Data:** copy the organisers' challenge data (the folders `trn/`, `tst/`, `tst_stim/`, `stimuli_train/`, `stimuli_test/`) into `data/` inside this repo. It is git-ignored, so it is never committed. If the data is somewhere else, set the environment variable `MINDREADING_DATA` to that folder instead, e.g. in PowerShell: `$env:MINDREADING_DATA="D:\eeg-mind-reading-challenge"`. The first run takes about 1 hour, mostly extracting the video and audio features (cached in `cache/`). Later runs take about 2 minutes. A GPU speeds up feature extraction a lot; for that, install the CUDA build of torch, e.g. `pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cu130`.
+**Data:** copy the organisers' challenge data (the folders `trn/`, `tst/`, `tst_stim/`, `stimuli_train/`, `stimuli_test/`) into `data/` inside this repo. It is git-ignored, so it is never committed. If the data is somewhere else, set the environment variable `MINDREADING_DATA` to that folder instead, e.g. in PowerShell: `$env:MINDREADING_DATA="D:\eeg-mind-reading-challenge"`. The first run takes about 1 hour, mostly extracting the video and audio features (cached in `cache/`). Later runs take about 8 minutes (the contrastive networks; much slower without a GPU). A GPU speeds up feature extraction and network training a lot; for that, install the CUDA build of torch, e.g. `pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cu130`.
 
 | Notebook | Does |
 |---|---|
@@ -63,13 +64,13 @@ The same direction as the organisers' baseline (video → predicted EEG → comp
    | Block | Weight | Captures |
    |---|---|---|
    | CLIP ViT-B/32, 8 frames | 1.0 | Objects and scenes |
-   | VideoMAE layers 4/8/12 | 0.6 | Motion and actions |
+   | VideoMAE layers 4/8/12 | 1.5 | Motion and actions |
    | Low-level time courses every 0.1 s over 0–1 s (same as the EEG window): brightness, contrast, saturation, motion, edges, scene cuts, loudness, sound onsets | 0.6 | Timing the early visual and auditory brain reacts to |
    | AST layer 4 | 0.5 | What the sound is |
-3. **Encoders:**
-   - Ridge regression from features to the 17 × 100 EEG.
-   - A separate regularisation strength for every electrode × time point.
-   - Three per subject: own data (weight 1), all 6 subjects (0.25), and the grand-average EEG over subjects (0.25).
+3. **Encoders.** There are two kinds, each fitted three times per subject: on that subject's own data (weight 1), on all 6 subjects (0.25), and on the grand-average EEG over subjects (0.25).
+   - **Ridge regression** from features to the 17 × 100 EEG, with a separate regularisation strength for every electrode × time point.
+   - **Contrastive neural network** (`mindreading/encoders.py`). It starts from the ridge solution and is trained for ranking: its predicted EEG must correlate better with the right recording than with the other recordings in the batch (InfoNCE, the loss CLIP is trained with). 3 networks with different seeds are averaged.
+   - Final score = ridge part + 2 × contrastive part.
 4. **Rhythm power (0–3 s):** a fourth encoder predicts how strong each brain rhythm (delta, theta, alpha, beta, low gamma) is per electrode in each 0.5 s bin. After about 1 s the exact wave shape is too variable to predict, but this slower brain state is not, so it uses the later 2 seconds of the recording. It is added to the wave score with weight 0.25.
 5. **Ranking:** correlation between the real EEG and each candidate's predicted EEG (wave and rhythm power).
 
@@ -78,7 +79,7 @@ Pretrained models (public, pinned to exact Hugging Face commits in `mindreading/
 - `MCG-NJU/videomae-base-finetuned-kinetics`
 - `MIT/ast-finetuned-audioset-10-10-0.4593`
 
-Trained weights: `weights/ensemble_encoders.joblib`.
+Trained weights: `weights/shared.joblib` (encoders shared by all subjects), `weights/sub-05.joblib`, `weights/sub-06.joblib` (float16, each under 50 MB).
 
 ### Results on the sub-01…04 test sets (102 candidates)
 
@@ -88,9 +89,12 @@ Trained weights: `weights/ensemble_encoders.joblib`.
 | organisers' baseline (AlexNet) | ~4% | 11.7% | |
 | first version: CLIP + ridge | 5.1% | 23.3% | 18.3 |
 | wave model only (0–1 s) | 16.7% | 46.1% | 6.3 |
-| **final model (+ rhythm power 0–3 s)** | **18.6%** | **46.1%** | **6.5** |
-| shuffled-label control | 0.7% | 3.2% | |
+| + rhythm power 0–3 s | 18.6% | 46.1% | 6.5 |
+| **final model (+ contrastive encoder, VideoMAE weight 1.5)** | **20.8%** | **50.7%** | **5.2** |
+| shuffled-label control | 1.0% | 4.9% | |
 
-Per subject, final model (top-1 / top-5): sub-01 20.6 / 48.0, sub-02 17.6 / 44.1, sub-03 14.7 / 47.1, sub-04 21.6 / 45.1. On held-out training videos, rhythm power adds about +4 points top-5 (20.9% → 24.7%). On the test sets it adds +1.9 points top-1 at the same top-5; see `past_trials/experiment_log.md`, rounds 9–10.
+Per subject, final model (top-1 / top-5): sub-01 25.5 / 54.9, sub-02 22.5 / 46.1, sub-03 12.7 / 48.0, sub-04 22.5 / 53.9.
+
+On held-out training videos, rhythm power raised top-5 from 20.9% to 24.7%, and the contrastive encoder from 24.7% to 28.5%. Every step is in `past_trials/experiment_log.md`.
 
 All settings were chosen on held-out *training* videos (3 random splits averaged). The sub-01…04 test answers were only used to report these scores, never to choose anything and never for sub-05/06.

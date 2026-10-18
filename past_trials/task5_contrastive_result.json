@@ -1,0 +1,155 @@
+{
+  "ridge, weights default": {
+    "top1": 0.07624108228541839,
+    "top5": 0.24724472630125327,
+    "median_rank": 18.083333333333332
+  },
+  "ridge, VideoMAE 1.5": {
+    "top1": 0.07803839009514466,
+    "top5": 0.2584945986383506,
+    "median_rank": 17.583333333333332
+  },
+  "contrastive tau 0.05, weights default": {
+    "top1": 0.0831572434761565,
+    "top5": 0.2611605650971649,
+    "median_rank": 16.0
+  },
+  "contrastive tau 0.05, VideoMAE 1.5": {
+    "top1": 0.08806509205579069,
+    "top5": 0.2834563693899154,
+    "median_rank": 15.083333333333334
+  },
+  "contrastive tau 0.1, VideoMAE 1.5": {
+    "top1": 0.08634448182498772,
+    "top5": 0.27624747840101205,
+    "median_rank": 15.694444444444445
+  },
+  "contrastive hidden 2048, VideoMAE 1.5": {
+    "top1": 0.08684058418602349,
+    "top5": 0.2788740650847803,
+    "median_rank": 14.972222222222221
+  },
+  "contrastive 3-seed average, VideoMAE 1.5": {
+    "top1": 0.09044512403385847,
+    "top5": 0.28328354424789637,
+    "median_rank": 14.944444444444445
+  },
+  "ridge + contrastive, weights default, w 0.5": {
+    "top1": 0.08390096536102859,
+    "top5": 0.26062094930613106,
+    "median_rank": 15.86111111111111
+  },
+  "ridge + contrastive, weights default, w 1.0": {
+    "top1": 0.08909392722223228,
+    "top5": 0.2677756835999192,
+    "median_rank": 15.444444444444445
+  },
+  "ridge + contrastive, weights default, w 2.0": {
+    "top1": 0.08590775839203335,
+    "top5": 0.26704577355439624,
+    "median_rank": 15.25
+  },
+  "ridge + contrastive, VideoMAE 1.5, w 0.5": {
+    "top1": 0.0878687939781549,
+    "top5": 0.27648559250641136,
+    "median_rank": 16.52777777777778
+  },
+  "ridge + contrastive, VideoMAE 1.5, w 1.0": {
+    "top1": 0.0882769792785424,
+    "top5": 0.2790983305015493,
+    "median_rank": 15.916666666666666
+  },
+  "ridge + contrastive, VideoMAE 1.5, w 2.0": {
+    "top1": 0.09228171785093629,
+    "top5": 0.2803459874518026,
+    "median_rank": 15.305555555555555
+  },
+  "ridge + contrastive tau 0.1, VideoMAE 1.5, w 0.5": {
+    "top1": 0.08280695109482948,
+    "top5": 0.2686065910146205,
+    "median_rank": 17.055555555555557
+  },
+  "ridge + contrastive tau 0.1, VideoMAE 1.5, w 1.0": {
+    "top1": 0.08310807811993433,
+    "top5": 0.2728951224159686,
+    "median_rank": 16.805555555555557
+  },
+  "ridge + contrastive tau 0.1, VideoMAE 1.5, w 2.0": {
+    "top1": 0.08467648325976804,
+    "top5": 0.27264123904758264,
+    "median_rank": 16.02777777777778
+  },
+  "ridge + contrastive h2048, VideoMAE 1.5, w 0.5": {
+    "top1": 0.08436608701563801,
+    "top5": 0.27592212991654264,
+    "median_rank": 16.36111111111111
+  },
+  "ridge + contrastive h2048, VideoMAE 1.5, w 1.0": {
+    "top1": 0.08612584747507968,
+    "top5": 0.2767120850405185,
+    "median_rank": 15.694444444444445
+  },
+  "ridge + contrastive h2048, VideoMAE 1.5, w 2.0": {
+    "top1": 0.08883837052715535,
+    "top5": 0.2798427279344336,
+    "median_rank": 15.083333333333334
+  },
+  "ridge + contrastive 3 seeds, VideoMAE 1.5, w 0.5": {
+    "top1": 0.08320178685642159,
+    "top5": 0.27616200072325314,
+    "median_rank": 16.52777777777778
+  },
+  "ridge + contrastive 3 seeds, VideoMAE 1.5, w 1.0": {
+    "top1": 0.08757724652275578,
+    "top5": 0.2782595796092122,
+    "median_rank": 15.944444444444445
+  },
+  "ridge + contrastive 3 seeds, VideoMAE 1.5, w 2.0": {
+    "top1": 0.08798659950410716,
+    "top5": 0.28524314086232333,
+    "median_rank": 15.25
+  },
+  "TEST sub-01..04: ridge part": {
+    "top1": 0.16911764705882354,
+    "top5": 0.4509803921568628,
+    "median_rank": 6.375
+  },
+  "TEST sub-01..04: best combination": {
+    "top1": 0.20833333333333331,
+    "top5": 0.5073529411764706,
+    "median_rank": 5.25
+  },
+  "TEST sub-01..04: per subject": {
+    "1": {
+      "top1": 0.2549019607843137,
+      "top5": 0.5490196078431373,
+      "median_rank": 5.0
+    },
+    "2": {
+      "top1": 0.22549019607843138,
+      "top5": 0.46078431372549017,
+      "median_rank": 6.0
+    },
+    "3": {
+      "top1": 0.12745098039215685,
+      "top5": 0.4803921568627451,
+      "median_rank": 6.0
+    },
+    "4": {
+      "top1": 0.22549019607843138,
+      "top5": 0.5392156862745098,
+      "median_rank": 4.0
+    }
+  },
+  "SHUFFLED control, test: ridge part": {
+    "top1": 0.00980392156862745,
+    "top5": 0.041666666666666664,
+    "median_rank": 54.0
+  },
+  "SHUFFLED control, test: best combination": {
+    "top1": 0.00980392156862745,
+    "top5": 0.04901960784313725,
+    "median_rank": 53.625
+  },
+  "best": "ridge + contrastive 3 seeds, VideoMAE 1.5, w 2.0"
+}
