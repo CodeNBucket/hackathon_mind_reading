@@ -14,7 +14,7 @@ We use only the organisers' data and public pretrained models. Video features pr
 | `run_all.py` | One command: runs our notebooks 03 → 04 → 05 |
 | `notebooks/` | `01`, `02`: the organisers' templates (reference). `03`, `04`, `05`: our pipeline |
 | `mindreading/` | The code our notebooks call (see "Code" below) |
-| `results/` | `dev_test_scores.json`: the scores; `colnorm.json`: the column-normalisation experiment |
+| `results/` | `dev_test_scores.json`: the scores; `colnorm.json`, `whiten_sweep*.json`, `noisecov.json`: results of the column-normalisation and whitening experiments |
 | `past_trials/` | How we chose the settings: `experiment_log.md` and the experiment code. Not needed to run anything |
 | `weights/` | The trained model (required deliverable) |
 | `submission/` | `sub-05_ranked_candidate_list.npy` and `sub-06_…`: what we hand in |
@@ -115,6 +115,7 @@ All settings were chosen on held-out *training* videos (3 random splits averaged
 
 All of these were tested on held-out training videos; details are in `past_trials/experiment_log.md`.
 - **EEG filtering:** band-pass and low-pass filters. Common average reference helped at first, but channel whitening replaced it.
+- **Other whitening methods and shrinkage values** (`past_trials/exp_whiten.py`, `exp_noisecov.py`; results in `results/whiten_sweep*.json`, `noisecov.json`): shrinkage ZCA with 0.3 stayed best.
 - **Longer EEG windows (0–1.5 to 0–3 s) and a time-resolved model (TRF) on 1–3 s:** both made the ranking worse. The later EEG helps only through rhythm power.
 - **A bigger image model (CLIP ViT-L/14, 16 frames):** no gain. Motion, low-level timing and sound add more than a stronger object recogniser.
 - **Other PCA sizes and single VideoMAE layers;** block weights other than the final ones. A VideoMAE weight above 1.0 looked better on the tuning splits but not on fresh ones.

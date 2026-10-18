@@ -14,3 +14,6 @@ models/
 # Cached video features and intermediate arrays (rebuilt by run_all.py)
 /cache/
 .ipynb_checkpoints/
+
+# Editor settings
+.vscode/
