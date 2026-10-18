@@ -73,6 +73,7 @@ The same direction as the organisers' baseline (video → predicted EEG → comp
    - Final score = ridge part + 2 × contrastive part.
 4. **Rhythm power (0–3 s):** a fourth encoder predicts how strong each brain rhythm (delta, theta, alpha, beta, low gamma) is per electrode in each 0.5 s bin. After about 1 s the exact wave shape is too variable to predict, but this slower brain state is not, so it uses the later 2 seconds of the recording. It is added to the wave score with weight 0.25.
 5. **Ranking:** correlation between the real EEG and each candidate's predicted EEG (wave and rhythm power).
+6. **Column normalisation (hubness fix):** some videos score high with almost every recording and crowd the top ranks. Each candidate's score is z-scored with that candidate's mean and spread over the subject's *training* recordings ("is this score unusual for this video?"). It uses training data only, and each test recording is ranked on its own.
 
 Pretrained models (public, pinned to exact Hugging Face commits in `mindreading/features.py`):
 - `openai/clip-vit-base-patch32`
@@ -90,11 +91,12 @@ Trained weights: `weights/shared.joblib` (encoders shared by all subjects), `wei
 | first version: CLIP + ridge | 5.1% | 23.3% | 18.3 |
 | wave model only (0–1 s) | 16.7% | 46.1% | 6.3 |
 | + rhythm power 0–3 s | 18.6% | 46.1% | 6.5 |
-| **final model (+ contrastive encoder, VideoMAE weight 1.0)** | **19.6%** | **51.7%** | **5.5** |
-| shuffled-label control | 0.7% | 4.7% | |
+| + contrastive encoder, VideoMAE weight 1.0 | 19.6% | 51.7% | 5.5 |
+| **final model (+ column normalisation)** | **19.9%** | **53.7%** | **5.0** |
+| shuffled-label control | 1.0% | 4.9% | |
 
-Per subject, final model (top-1 / top-5): sub-01 23.5 / 56.9, sub-02 20.6 / 48.0, sub-03 13.7 / 49.0, sub-04 20.6 / 52.9.
+Per subject, final model (top-1 / top-5): sub-01 25.5 / 60.8, sub-02 14.7 / 46.1, sub-03 11.8 / 52.0, sub-04 27.5 / 55.9.
 
-On held-out training videos, rhythm power raised top-5 from 20.9% to 24.7%, and the contrastive encoder from 24.7% to 28.3%. On 5 fresh splits never used for any choice, the final model scores 8.1% top-1 / 26.3% top-5 (ridge + power alone: 7.5% / 24.1%), which is the unbiased estimate. Every step is in `past_trials/experiment_log.md`.
+On held-out training videos, rhythm power raised top-5 from 20.9% to 24.7%, and the contrastive encoder from 24.7% to 28.3%. On 5 fresh splits never used for any choice (the unbiased estimate): main 6.1% / 21.2%, + rhythm power 7.4% / 23.4%, + contrastive encoder 8.1% / 26.3%, final model with column normalisation **8.4% top-1 / 27.0% top-5**. Every step is in `past_trials/experiment_log.md`.
 
 All settings were chosen on held-out *training* videos (3 random splits averaged). The sub-01…04 test answers were only used to report these scores, never to choose anything and never for sub-05/06.

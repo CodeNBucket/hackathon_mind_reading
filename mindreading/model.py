@@ -20,6 +20,11 @@ How it works (every choice validated on held-out *training* videos, see past_tri
    and one ridge encoder for rhythm power (weight 0.25).
 5. Score of (recording, candidate video) = correlation between the real EEG and the EEG the
    encoders predict for that video; final = ridge part + 2 x contrastive part. Higher = more likely.
+6. Column normalisation (Config.colnorm, on), "hubness" fix: some candidate videos score high with almost every
+   recording and crowd the top ranks. Each candidate's score is z-scored with that candidate's
+   mean and spread over the subject's TRAINING recordings ("is this score unusual for this
+   video?"). Uses training data only and ranks one test recording at a time.
+   See past_trials/exp_colnorm.py.
 """
 from dataclasses import dataclass, field
 
@@ -89,6 +94,8 @@ class Config:
     power_weight: float = 0.25         # weight of the rhythm-power member (0 = off)
     contrastive_weight: float = 2.0    # weight of the contrastive-network ensemble vs ridge (0 = off)
     contrastive_seeds: int = 3         # networks averaged per contrastive member
+    colnorm: bool = True               # rank by the per-candidate normalised score (step 6); the
+                                       # 'colnorm' and 'raw' scores are always reported side by side
     shuffle_labels: bool = False       # sanity check: wrong video per recording -> must score chance
 
 
@@ -216,6 +223,26 @@ class Model:
             per["ensemble"] = _rowz(part["wave"]) + self.cfg.contrastive_weight * _rowz(part["wave_c"])
         return per
 
+    def colnorm_stats(self, members, sub, candidate_ids, fit_ids=None):
+        """Each candidate's mean and spread of the ensemble score over this subject's TRAINING
+        recordings (only those of `fit_ids` during validation). Training data only."""
+        ids, Y = self.train_eeg(sub)
+        m = np.ones(len(ids), bool) if fit_ids is None else np.isin(ids, fit_ids)
+        P = self.train_power(sub)[m] if self.cfg.power_weight else None
+        R = self.scores(members, Y[m], candidate_ids, P)["ensemble"]
+        return R.mean(0, keepdims=True), R.std(0, keepdims=True) + 1e-8
+
+    def ranked_scores(self, members, sub, eeg, candidate_ids, power=None, fit_ids=None):
+        """scores() plus 'raw' (the ensemble as before) and 'colnorm' (the ensemble z-scored per
+        candidate against the subject's training recordings). 'ensemble' is the one used for
+        ranking: 'colnorm' if Config.colnorm is on, otherwise 'raw'."""
+        per = self.scores(members, eeg, candidate_ids, power)
+        mu, sd = self.colnorm_stats(members, sub, candidate_ids, fit_ids)
+        per["raw"] = per["ensemble"]
+        per["colnorm"] = (per["raw"] - mu) / sd
+        per["ensemble"] = per["colnorm"] if self.cfg.colnorm else per["raw"]
+        return per
+
 
 # ---------------------------------------------------------------- evaluation
 
@@ -247,7 +274,7 @@ def validate(cfg, seeds=(0, 1, 2), subjects=SUBJECTS, model=None):
             m = np.isin(ids, val_ids)
             cand = np.unique(ids[m])
             P = model.train_power(s)[m] if cfg.power_weight else None
-            for k, sc in model.scores(members, Y[m], cand, P).items():
+            for k, sc in model.ranked_scores(members, s, Y[m], cand, P, fit_ids).items():
                 acc.setdefault(k, []).append(topk(sc, np.searchsorted(cand, ids[m])))
     return {k: {q: float(np.mean([r[q] for r in v])) for q in ("top1", "top5", "median_rank")}
             for k, v in acc.items()}
@@ -263,7 +290,7 @@ def dev_test(cfg, subjects=(1, 2, 3, 4), model=None):
         members = {**model.fit_subject(s), **model.shared}
         eeg, labels = model.test_eeg(s)
         P = model.test_power(s) if cfg.power_weight else None
-        res[s] = {k: topk(sc, labels - cand[0]) for k, sc in model.scores(members, eeg, cand, P).items()}
+        res[s] = {k: topk(sc, labels - cand[0]) for k, sc in model.ranked_scores(members, s, eeg, cand, P).items()}
     return res
 
 
@@ -296,7 +323,9 @@ def export_weights(model, members_by_subject, out_dir):
 
 
 def predict_scores(model, sub, members):
-    """Score matrix for a subject's test file: 102 recordings (original order) x 102 candidates."""
+    """Score matrix for a subject's test file: 102 recordings (original order) x 102 candidates.
+    With Config.colnorm on, scores are normalised per candidate against the subject's training
+    recordings (never against other test recordings)."""
     eeg, _ = model.test_eeg(sub)
     P = model.test_power(sub) if model.cfg.power_weight else None
-    return model.scores(members, eeg, np.array(TEST_IDS), P)["ensemble"]
+    return model.ranked_scores(members, sub, eeg, np.array(TEST_IDS), P)["ensemble"]

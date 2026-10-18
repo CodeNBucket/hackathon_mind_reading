@@ -191,6 +191,19 @@ The +1.1 top-5 of VideoMAE 1.5 in round 13 was mostly split luck. 1.0 and 1.5 ti
 
 (Ridge wave alone: 22.6% top-5.) The contrastive loss is the key ingredient: a network trained to reproduce the EEG is far below ridge and hurts the ensemble. The ridge start makes the network better on its own; in the ridge + network ensemble A and B are within noise (A better top-1, B better top-5). Kept A. Script: `task7_nn_ablation.py`.
 
+## Round 18: branch comparison and merging column normalisation (5 fresh splits, seeds 3–7)
+Same splits and test sets for every version. Script: `task8_branch_comparison.py`.
+
+| version | fresh splits top-1 / top-5 / median | sub-01…04 test top-1 / top-5 / median |
+|---|---|---|
+| main (ridge only) | 6.1% / 21.2% / 21.3 | 16.7% / 46.1% / 6.2 |
+| + rhythm power | 7.4% / 23.4% / 19.8 | 18.6% / 46.1% / 6.5 |
+| + rhythm power + column normalisation (branch column-normalisation) | 7.8% / 24.5% / 19.2 | 16.9% / 48.5% / 5.9 |
+| overnight (+ contrastive encoder, VideoMAE 1.0) | 8.1% / 26.3% / 15.8 | 19.6% / 51.7% / 5.6 |
+| **overnight + column normalisation (merged)** | **8.4% / 27.0% / 15.8** | **19.9% / 53.7% / 5.1** |
+
+Column normalisation improves the overnight model on both the fresh splits and the test sets, so the column-normalisation branch was merged and `Config.colnorm` stays on.
+
 ## Milestone scores on the sub-01…04 test sets (102 candidates)
 | model | top-1 | top-5 | median rank |
 |---|---|---|---|
@@ -204,7 +217,8 @@ The +1.1 top-5 of VideoMAE 1.5 in round 13 was mostly split luck. 1.0 and 1.5 ti
 | + rhythm power, 0–3 s | 17.6% | 45.6% | 6.6 |
 | + low-level window 0–1.0 s | 18.6% | 46.1% | 6.5 |
 | + contrastive encoder (3 seeds, weight 2) + VideoMAE weight 1.5 | 20.8% | 50.7% | 5.2 |
-| **final: VideoMAE weight 1.0 after the fresh-split check (branch overnight-experiments)** | **19.6%** | **51.7%** | **5.5** |
-| shuffled-label control (final model) | 0.7% | 4.7% | |
+| + VideoMAE weight 1.0 after the fresh-split check | 19.6% | 51.7% | 5.5 |
+| **final: + column normalisation (merged from branch column-normalisation)** | **19.9%** | **53.7%** | **5.0** |
+| shuffled-label control (final model) | 1.0% | 4.9% | |
 
 On the test sets, rhythm power is neutral (+0.9 top-1, −0.5 top-5, within noise), although alone it scores 13.7% top-5 there (chance 4.9%). The test recordings are cleaner than the training recordings (test/train amplitude ratio ~0.65, consistent with averaging over more repetitions), so the wave model already dominates there. It was kept because the decision rule is the held-out training videos, where it adds +3.5 points.
