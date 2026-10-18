@@ -2,6 +2,10 @@
 
 Identify which 3-second video a person watched from their EEG. Hackathon project, Python 3.11.
 
+**Final model on the sub-01…04 test sets (102 candidates): 19.9% top-1, 53.7% top-5** (chance 1% / 5%; organisers' baseline ~4% / 11.7%). A fresh clone run end to end with `run_all.py` reproduces the submitted files byte for byte.
+
+We use only the organisers' data and public pretrained models. Video features predict the EEG each video should evoke (an *encoding model*), and each recording is matched to the candidate whose predicted EEG fits best.
+
 ## Layout
 
 | Path | What it is |
@@ -10,7 +14,7 @@ Identify which 3-second video a person watched from their EEG. Hackathon project
 | `run_all.py` | One command: runs our notebooks 03 → 04 → 05 |
 | `notebooks/` | `01`, `02`: the organisers' templates (reference). `03`, `04`, `05`: our pipeline |
 | `mindreading/` | The code our notebooks call (see "Code" below) |
-| `results/` | `dev_test_scores.json`: the scores |
+| `results/` | `dev_test_scores.json`: the scores; `colnorm.json`: the column-normalisation experiment |
 | `past_trials/` | How we chose the settings: `experiment_log.md` and the experiment code. Not needed to run anything |
 | `weights/` | The trained model (required deliverable) |
 | `submission/` | `sub-05_ranked_candidate_list.npy` and `sub-06_…`: what we hand in |
@@ -42,7 +46,9 @@ py -3.11 -m venv .venv
 
 Linux / macOS: `python3.11 -m venv .venv`, `.venv/bin/python -m pip install -r requirements.txt`, `.venv/bin/python run_all.py`.
 
-**Data:** copy the organisers' challenge data (the folders `trn/`, `tst/`, `tst_stim/`, `stimuli_train/`, `stimuli_test/`) into `data/` inside this repo. It is git-ignored, so it is never committed. If the data is somewhere else, set the environment variable `MINDREADING_DATA` to that folder instead, e.g. in PowerShell: `$env:MINDREADING_DATA="D:\eeg-mind-reading-challenge"`. The first run takes about 1 hour, mostly extracting the video and audio features (cached in `cache/`). Later runs take about 8 minutes (the contrastive networks; much slower without a GPU). A GPU speeds up feature extraction and network training a lot; for that, install the CUDA build of torch, e.g. `pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cu130`.
+On Windows, clone into a short path (e.g. `C:\hackathon_mind_reading`): the `jupyter` package installs deeply nested files, and a long folder path can exceed Windows' 260-character limit during `pip install`.
+
+**Data:** copy the organisers' challenge data (the folders `trn/`, `tst/`, `tst_stim/`, `stimuli_train/`, `stimuli_test/`) into `data/` inside this repo. It is git-ignored, so it is never committed. If the data is somewhere else, set the environment variable `MINDREADING_DATA` to that folder instead, e.g. in PowerShell: `$env:MINDREADING_DATA="D:\eeg-mind-reading-challenge"`. The first run takes about 1 hour 20 minutes (measured on a fresh clone, laptop with an RTX 4070 GPU): about 70 minutes to extract the video and audio features (cached in `cache/`; mostly video decoding on the CPU), about 10 minutes to train, validate and write the submission. Later runs reuse the cache and take about 10 minutes (much slower without a GPU, because of the contrastive networks). A GPU speeds up feature extraction and network training a lot; for that, install the CUDA build of torch, e.g. `pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cu130`.
 
 | Notebook | Does |
 |---|---|
@@ -75,7 +81,7 @@ The same direction as the organisers' baseline (video → predicted EEG → comp
    - **Ridge regression** from features to the 17 × 100 EEG, with a separate regularisation strength for every electrode × time point.
    - **Contrastive neural network** (`mindreading/encoders.py`). It starts from the ridge solution and is trained for ranking: its predicted EEG must correlate better with the right recording than with the other recordings in the batch (InfoNCE, the loss CLIP is trained with). 3 networks with different seeds are averaged.
    - Final score = ridge part + 2 × contrastive part.
-4. **Rhythm power (0–3 s):** a fourth encoder predicts how strong each brain rhythm (delta, theta, alpha, beta, low gamma) is per electrode in each 0.5 s bin. After about 1 s the exact wave shape is too variable to predict, but this slower brain state is not, so it uses the later 2 seconds of the recording. It is added to the wave score with weight 0.25.
+4. **Rhythm power (0–3 s):** a ridge encoder predicts how strong each brain rhythm (delta 1–4, theta 4–8, alpha 8–13, beta 13–30, low gamma 30–45 Hz) is per electrode in each 0.5 s bin of the whole 3 s recording (17 × 5 × 6 = 510 values). After about 1 s the exact wave shape varies too much to predict, but this slower brain state does not, so it brings in the 1–3 s that the wave model ignores. It is added to the wave score with weight 0.25.
 5. **Ranking:** correlation between the real EEG and each candidate's predicted EEG (wave and rhythm power).
 6. **Column normalisation (hubness fix):** some videos score high with almost every recording and crowd the top ranks. Each candidate's score is z-scored with that candidate's mean and spread over the subject's *training* recordings ("is this score unusual for this video?"). It uses training data only, and each test recording is ranked on its own.
 
@@ -84,7 +90,7 @@ Pretrained models (public, pinned to exact Hugging Face commits in `mindreading/
 - `MCG-NJU/videomae-base-finetuned-kinetics`
 - `MIT/ast-finetuned-audioset-10-10-0.4593`
 
-Trained weights: `weights/shared.joblib` (encoders shared by all subjects), `weights/sub-05.joblib`, `weights/sub-06.joblib` (float16, each under 50 MB).
+Trained weights: `weights/shared.joblib` (encoders shared by all subjects), `weights/sub-05.joblib`, `weights/sub-06.joblib` (float16; about 50, 26 and 26 MB, each under GitHub's 100 MB limit).
 
 ### Results on the sub-01…04 test sets (102 candidates)
 
@@ -101,6 +107,38 @@ Trained weights: `weights/shared.joblib` (encoders shared by all subjects), `wei
 
 Per subject, final model (top-1 / top-5): sub-01 25.5 / 60.8, sub-02 14.7 / 46.1, sub-03 11.8 / 52.0, sub-04 27.5 / 55.9.
 
-On held-out training videos, rhythm power raised top-5 from 20.9% to 24.7%, and the contrastive encoder from 24.7% to 28.3%. On 5 fresh splits never used for any choice (the unbiased estimate): main 6.1% / 21.2%, + rhythm power 7.4% / 23.4%, + contrastive encoder 8.1% / 26.3%, final model with column normalisation **8.4% top-1 / 27.0% top-5**. Every step is in `past_trials/experiment_log.md`.
+On held-out training videos, rhythm power raised top-5 from 20.9% to 24.7%, and the contrastive encoder from 24.7% to 28.3%. On 5 fresh splits never used for any choice (the unbiased estimate): wave model only 6.1% / 21.2%, + rhythm power 7.4% / 23.4%, + contrastive encoder 8.1% / 26.3%, final model with column normalisation **8.4% top-1 / 27.0% top-5**. Every step is in `past_trials/experiment_log.md`.
 
 All settings were chosen on held-out *training* videos (3 random splits averaged). The sub-01…04 test answers were only used to report these scores, never to choose anything and never for sub-05/06.
+
+### What we tried that did not help
+
+All of these were tested on held-out training videos; details are in `past_trials/experiment_log.md`.
+- **EEG filtering:** band-pass and low-pass filters. Common average reference helped at first, but channel whitening replaced it.
+- **Longer EEG windows (0–1.5 to 0–3 s) and a time-resolved model (TRF) on 1–3 s:** both made the ranking worse. The later EEG helps only through rhythm power.
+- **A bigger image model (CLIP ViT-L/14, 16 frames):** no gain. Motion, low-level timing and sound add more than a stronger object recogniser.
+- **Other PCA sizes and single VideoMAE layers;** block weights other than the final ones. A VideoMAE weight above 1.0 looked better on the tuning splits but not on fresh ones.
+- **Other encoders:** kernel ridge (top-5 22.7% vs 24.7% for ridge). A neural network trained to reproduce the EEG did worse than ridge (17.6% vs 22.6%) and hurt the ensemble. Only the network trained for ranking (contrastive loss) helped.
+
+### How we guarded against overfitting
+
+- **Choosing settings:** every setting was chosen on held-out *training* videos (15% hidden, 3 random splits). The sub-01…04 test answers were used only to report scores.
+- **Fresh splits:** the final choices were re-checked on 5 new random splits that no choice had used. This revealed that a VideoMAE weight of 1.5 was split luck, so 1.0 is used.
+- **Shuffled labels:** training with shuffled video labels gives chance-level scores (1.0% / 4.9%), so the scores come from the real link between videos and EEG.
+- **Early stopping:** the neural networks stop on held-out training videos, and 3 seeds are averaged.
+
+### References
+
+- **Encoding models with ridge regression:** Naselaris, Kay, Nishimoto & Gallant (2011), *Encoding and decoding in fMRI*, NeuroImage. Hoerl & Kennard (1970), *Ridge regression*, Technometrics.
+- **Temporal response functions for EEG:** Crosse et al. (2016), *The multivariate temporal response function (mTRF) toolbox*, Frontiers in Human Neuroscience.
+- **Channel whitening (multivariate noise normalisation):** Guggenmos, Sterzer & Cichy (2018), NeuroImage. Shrinkage covariance: Ledoit & Wolf (2004), Journal of Multivariate Analysis.
+- **Video and audio features:**
+  - Radford et al. (2021), *CLIP*, ICML.
+  - Tong et al. (2022), *VideoMAE*, NeurIPS.
+  - Gong, Chung & Glass (2021), *AST: Audio Spectrogram Transformer*, Interspeech.
+- **Contrastive training for brain decoding:**
+  - van den Oord, Li & Vinyals (2018), *Representation learning with contrastive predictive coding* (InfoNCE).
+  - Défossez et al. (2023), *Decoding speech perception from non-invasive brain recordings*, Nature Machine Intelligence.
+  - Song et al. (2024), *Decoding natural images from EEG for object recognition*, ICLR.
+- **Hubness and column normalisation:** Radovanović, Nanopoulos & Ivanović (2010), *Hubs in space*, JMLR. Dinu, Lazaridou & Baroni (2015), *Improving zero-shot learning by mitigating the hubness problem*, ICLR workshop.
+- **Seed ensembles:** Lakshminarayanan, Pritzel & Blundell (2017), *Deep ensembles*, NeurIPS.
