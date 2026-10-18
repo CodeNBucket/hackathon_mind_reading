@@ -4,13 +4,16 @@
   B  random start + InfoNCE          (no ridge start)
   C  random start + MSE only         (plain NN predicting the EEG)
 All with 1 network (no seed averaging) so only the ingredient changes.
+
+    .venv\Scripts\python.exe past_trials\task7_nn_ablation.py
 """
 import sys
 import time
+from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, sys.argv[1])
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import mindreading.encoders as enc
 from mindreading.model import Config, Model, VideoFeatures, validate
 
@@ -81,7 +84,7 @@ class Variant(enc.ContrastiveEncoder):
         return self
 
 
-cfg = Config(contrastive_seeds=1)
+cfg = Config(blocks={"clip": 1.0, "ast4": 0.5, "low": 0.6, "mae": 1.5}, contrastive_seeds=1, colnorm=False)  # as run (round 17)
 feats = VideoFeatures(cfg.blocks)
 for tag, init, nce in [("A ridge start + InfoNCE (current)", True, True),
                        ("B random start + InfoNCE", False, True),

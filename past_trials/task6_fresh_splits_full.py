@@ -1,15 +1,19 @@
-"""Full model (ridge + contrastive) on 5 NEW splits: VideoMAE weight 0.6 / 1.0 / 1.5."""
+"""Full model (ridge + contrastive) on 5 NEW splits: VideoMAE weight 0.6 / 1.0 / 1.5.
+
+    .venv\Scripts\python.exe past_trials\task6_fresh_splits_full.py
+"""
 import sys
 import time
+from pathlib import Path
 
-sys.path.insert(0, sys.argv[1])
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from mindreading.model import Config, Model, VideoFeatures, validate
 
 SEEDS = (3, 4, 5, 6, 7)
 base = VideoFeatures({"clip": 1.0, "ast4": 1.0, "low": 1.0, "mae": 1.0})
 for mae in (0.6, 1.0, 1.5):
     blocks = {"clip": 1.0, "ast4": 0.5, "low": 0.6, "mae": mae}
-    cfg = Config(blocks=blocks)
+    cfg = Config(blocks=blocks, colnorm=False)
     feats = VideoFeatures.__new__(VideoFeatures)
     feats.blocks, feats.tables = blocks, base.tables
     t0 = time.time()

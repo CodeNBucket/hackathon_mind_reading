@@ -1,8 +1,12 @@
-"""Confirm the weight search on 5 NEW random splits (seeds 3-7) that the search never used."""
+"""Confirm the weight search on 5 NEW random splits (seeds 3-7) that the search never used.
+
+    .venv\Scripts\python.exe past_trials\task6_fresh_splits_ridge.py
+"""
 import sys
 import time
+from pathlib import Path
 
-sys.path.insert(0, sys.argv[1])
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from mindreading.model import Config, Model, VideoFeatures, validate
 
 SEEDS = (3, 4, 5, 6, 7)
@@ -15,7 +19,7 @@ runs = [
     ("VideoMAE 1.5, power 0.35", {"clip": 1.0, "ast4": 0.5, "low": 0.6, "mae": 1.5}, 0.35),
 ]
 for tag, blocks, power in runs:
-    cfg = Config(blocks=blocks, power_weight=power, contrastive_weight=0.0)
+    cfg = Config(blocks=blocks, power_weight=power, contrastive_weight=0.0, colnorm=False)
     feats = VideoFeatures.__new__(VideoFeatures)
     feats.blocks, feats.tables = blocks, base.tables
     t0 = time.time()

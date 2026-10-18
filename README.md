@@ -32,11 +32,15 @@ Identify which 3-second video a person watched from their EEG. Hackathon project
 
 ## Pipeline (runs end to end)
 
+Requires **Python 3.11** (`run_all.py` stops on any other version). Windows:
+
 ```
 py -3.11 -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements.txt
 .venv\Scripts\python.exe run_all.py
 ```
+
+Linux / macOS: `python3.11 -m venv .venv`, `.venv/bin/python -m pip install -r requirements.txt`, `.venv/bin/python run_all.py`.
 
 **Data:** copy the organisers' challenge data (the folders `trn/`, `tst/`, `tst_stim/`, `stimuli_train/`, `stimuli_test/`) into `data/` inside this repo. It is git-ignored, so it is never committed. If the data is somewhere else, set the environment variable `MINDREADING_DATA` to that folder instead, e.g. in PowerShell: `$env:MINDREADING_DATA="D:\eeg-mind-reading-challenge"`. The first run takes about 1 hour, mostly extracting the video and audio features (cached in `cache/`). Later runs take about 8 minutes (the contrastive networks; much slower without a GPU). A GPU speeds up feature extraction and network training a lot; for that, install the CUDA build of torch, e.g. `pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cu130`.
 

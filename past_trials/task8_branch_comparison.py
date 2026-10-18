@@ -1,13 +1,14 @@
 """Compare branches on 5 fresh splits (seeds 3-7) and the sub-01..04 test sets.
 
-    python compare.py <repo path> <label> [colnorm]
+    .venv\Scripts\python.exe past_trials\task8_branch_comparison.py <checkout of a branch> <label> [colnorm]
+
+Run once per branch checkout (e.g. a git worktree of main, of column-normalisation, and this repo).
 
 With 'colnorm' (for overnight), İrem's column normalisation is applied on top: each candidate's
 ensemble score is z-scored with its mean/std over the subject's TRAINING recordings (fit videos
 only during validation), exactly as on the column-normalisation branch. Raw and colnorm are
 reported from the same trained models.
 """
-import json
 import sys
 import time
 
@@ -69,5 +70,4 @@ for k in keys:
     v, t = val[k], test[k]
     print(f"{label} [{k}]  fresh splits: top1 {v['top1']:.3f} top5 {v['top5']:.3f} median {v['median_rank']:.1f} | "
           f"test: top1 {t['top1']:.3f} top5 {t['top5']:.3f} median {t['median_rank']:.1f}", flush=True)
-json.dump({"val": val, "test": test}, open(sys.argv[0].replace("compare.py", f"compare_{label}.json"), "w"), indent=1)
 print(f"({time.time() - t0:.0f} s)")
