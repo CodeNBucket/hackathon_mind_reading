@@ -79,7 +79,7 @@ class VideoFeatures:
 
 @dataclass
 class Config:
-    blocks: dict = field(default_factory=lambda: {"clip": 1.0, "ast4": 0.5, "low": 0.6, "mae": 1.5})
+    blocks: dict = field(default_factory=lambda: {"clip": 1.0, "ast4": 0.5, "low": 0.6, "mae": 1.0})
     tmin: float = 0.0                  # EEG window, seconds after video onset
     tmax: float = 1.0
     car: bool = False                  # common average reference (replaced by whitening)

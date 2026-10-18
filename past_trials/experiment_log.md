@@ -161,6 +161,36 @@ Script: `task4_encoders.py`.
 
 On the sub-01…04 test sets (report only): **20.8% top-1, 50.7% top-5, median rank 5.2** (ridge part alone: 16.9% / 45.1%). Per subject top-1 / top-5: sub-01 25.5 / 54.9, sub-02 22.5 / 46.1, sub-03 12.7 / 48.0, sub-04 22.5 / 53.9. Shuffled-label control: 1.0% / 4.9% (chance). Script: `task5_contrastive.py`.
 
+## Round 16: overfitting check on 5 fresh splits (seeds 3–7, never used for any choice)
+The weight search (round 13) and the contrastive tuning (round 15) both chose settings on splits 0–2, so their best scores are optimistic. Re-tested on 5 new random splits.
+
+Ridge + rhythm power only:
+| setting | top-1 | top-5 | median rank |
+|---|---|---|---|
+| VideoMAE 0.6 (before round 13) | 7.4% | 23.4% | 19.8 |
+| VideoMAE 1.0 | 7.5% | 24.1% | 19.0 |
+| VideoMAE 1.5 (round 13 choice) | 7.3% | 23.6% | 18.6 |
+| VideoMAE 2.0 | 7.2% | 23.1% | 18.5 |
+| VideoMAE 1.5, power 0.35 | 7.3% | 23.8% | 18.3 |
+
+Full model (ridge + 2 × contrastive, 3 seeds):
+| setting | top-1 | top-5 | median rank |
+|---|---|---|---|
+| VideoMAE 0.6 | 8.2% | 25.6% | 16.1 |
+| **VideoMAE 1.0 (chosen)** | **8.1%** | **26.3%** | **15.8** |
+| VideoMAE 1.5 | 8.0% | 26.4% | 15.8 |
+
+The +1.1 top-5 of VideoMAE 1.5 in round 13 was mostly split luck. 1.0 and 1.5 tie, both slightly above 0.6; 1.0 is the smaller change and the best ridge-only setting, so it is used. The unbiased held-out estimate of the final model is ~8.1% top-1 / 26.3% top-5 (not the 28.5% of round 15). Scripts: `task6_fresh_splits_ridge.py`, `task6_fresh_splits_full.py`.
+
+## Round 17: why this neural network? (splits 0–2, 1 network each, VideoMAE 1.5)
+| network | NN alone top-1 / top-5 / median | ridge + 2 × NN top-1 / top-5 / median |
+|---|---|---|
+| A: ridge start + InfoNCE (used) | 7.9% / 24.3% / 17.3 | 9.2% / 28.0% / 15.3 |
+| B: random start + InfoNCE | 7.2% / 23.5% / 18.5 | 8.5% / 28.5% / 14.9 |
+| C: plain NN, random start, MSE | 4.5% / 17.6% / 26.1 | 6.5% / 23.4% / 20.2 |
+
+(Ridge wave alone: 22.6% top-5.) The contrastive loss is the key ingredient: a network trained to reproduce the EEG is far below ridge and hurts the ensemble. The ridge start makes the network better on its own; in the ridge + network ensemble A and B are within noise (A better top-1, B better top-5). Kept A. Script: `task7_nn_ablation.py`.
+
 ## Milestone scores on the sub-01…04 test sets (102 candidates)
 | model | top-1 | top-5 | median rank |
 |---|---|---|---|
@@ -173,7 +203,8 @@ On the sub-01…04 test sets (report only): **20.8% top-1, 50.7% top-5, median r
 | + member weights 1 / 0.25 / 0.25 | 16.7% | 46.1% | 6.3 |
 | + rhythm power, 0–3 s | 17.6% | 45.6% | 6.6 |
 | + low-level window 0–1.0 s | 18.6% | 46.1% | 6.5 |
-| **+ contrastive encoder (3 seeds, weight 2) + VideoMAE weight 1.5 (branch overnight-experiments)** | **20.8%** | **50.7%** | **5.2** |
-| shuffled-label control (final model) | 0.7% | 3.2% | |
+| + contrastive encoder (3 seeds, weight 2) + VideoMAE weight 1.5 | 20.8% | 50.7% | 5.2 |
+| **final: VideoMAE weight 1.0 after the fresh-split check (branch overnight-experiments)** | **19.6%** | **51.7%** | **5.5** |
+| shuffled-label control (final model) | 0.7% | 4.7% | |
 
 On the test sets, rhythm power is neutral (+0.9 top-1, −0.5 top-5, within noise), although alone it scores 13.7% top-5 there (chance 4.9%). The test recordings are cleaner than the training recordings (test/train amplitude ratio ~0.65, consistent with averaging over more repetitions), so the wave model already dominates there. It was kept because the decision rule is the held-out training videos, where it adds +3.5 points.

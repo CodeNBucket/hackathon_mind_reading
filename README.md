@@ -64,7 +64,7 @@ The same direction as the organisers' baseline (video → predicted EEG → comp
    | Block | Weight | Captures |
    |---|---|---|
    | CLIP ViT-B/32, 8 frames | 1.0 | Objects and scenes |
-   | VideoMAE layers 4/8/12 | 1.5 | Motion and actions |
+   | VideoMAE layers 4/8/12 | 1.0 | Motion and actions |
    | Low-level time courses every 0.1 s over 0–1 s (same as the EEG window): brightness, contrast, saturation, motion, edges, scene cuts, loudness, sound onsets | 0.6 | Timing the early visual and auditory brain reacts to |
    | AST layer 4 | 0.5 | What the sound is |
 3. **Encoders.** There are two kinds, each fitted three times per subject: on that subject's own data (weight 1), on all 6 subjects (0.25), and on the grand-average EEG over subjects (0.25).
@@ -90,11 +90,11 @@ Trained weights: `weights/shared.joblib` (encoders shared by all subjects), `wei
 | first version: CLIP + ridge | 5.1% | 23.3% | 18.3 |
 | wave model only (0–1 s) | 16.7% | 46.1% | 6.3 |
 | + rhythm power 0–3 s | 18.6% | 46.1% | 6.5 |
-| **final model (+ contrastive encoder, VideoMAE weight 1.5)** | **20.8%** | **50.7%** | **5.2** |
-| shuffled-label control | 1.0% | 4.9% | |
+| **final model (+ contrastive encoder, VideoMAE weight 1.0)** | **19.6%** | **51.7%** | **5.5** |
+| shuffled-label control | 0.7% | 4.7% | |
 
-Per subject, final model (top-1 / top-5): sub-01 25.5 / 54.9, sub-02 22.5 / 46.1, sub-03 12.7 / 48.0, sub-04 22.5 / 53.9.
+Per subject, final model (top-1 / top-5): sub-01 23.5 / 56.9, sub-02 20.6 / 48.0, sub-03 13.7 / 49.0, sub-04 20.6 / 52.9.
 
-On held-out training videos, rhythm power raised top-5 from 20.9% to 24.7%, and the contrastive encoder from 24.7% to 28.5%. Every step is in `past_trials/experiment_log.md`.
+On held-out training videos, rhythm power raised top-5 from 20.9% to 24.7%, and the contrastive encoder from 24.7% to 28.3%. On 5 fresh splits never used for any choice, the final model scores 8.1% top-1 / 26.3% top-5 (ridge + power alone: 7.5% / 24.1%), which is the unbiased estimate. Every step is in `past_trials/experiment_log.md`.
 
 All settings were chosen on held-out *training* videos (3 random splits averaged). The sub-01…04 test answers were only used to report these scores, never to choose anything and never for sub-05/06.
