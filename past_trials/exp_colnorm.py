@@ -1,34 +1,25 @@
-"""Does normalising the score matrix per candidate video ("hubness" fix) improve the ranking?
+"""Does normalising each candidate video's scores ("hubness" fix) improve the ranking?
 
     python past_trials\\exp_colnorm.py
 
-The problem: some candidate videos get a high predicted-EEG correlation with almost EVERY
-recording (they are "hubs"), so they crowd into everyone's top-5 and push the true video down.
-Each test video was watched exactly once per subject, so every candidate should be the right
-answer for exactly one recording. Normalising each candidate's column removes its overall bias.
+The problem: some candidate videos get a high score with almost EVERY recording (they are
+"hubs"), so they crowd into everyone's top-5 and push the true video down.
 
-Methods, applied to the final ensemble score matrix (recordings x candidates):
-  none     current ranking (each row sorted as it is)
-  col      z-score each column: how much better does this candidate fit THIS recording
-           than it fits the other recordings?
-  rowcol   alternate column and row z-scoring 5 times (balances both directions)
-  csls     cross-domain similarity local scaling (Conneau et al., 2018), k = 10:
-           2*S - (mean top-10 of the row) - (mean top-10 of the column)
-  col_train  the CLEARLY ALLOWED version: each candidate's "usual" score (mean and spread) is
-           measured against this subject's TRAINING recordings, and the test score is
-           z-scored with those numbers. Uses no test recording other than the one being
-           ranked, so it works one recording at a time, as the brief's expected output asks.
-           In validation the reference is the subject's fitting recordings (never the hidden ones).
+Version 2: scores the FULL current model (wave members + rhythm-power member) through
+Model.ranked_scores, i.e. exactly what the pipeline uses. Version 1 (git history) scored the
+model without the power member and found +2.2 points of top-5; this checks whether that holds.
 
-Same model, same features, same protocol as mindreading.model.validate (15% of training videos
-hidden, 3 splits). In each split every subject watched every hidden video once, so the hidden
-block is one-to-one like the real 102 x 102 test, and the methods can be checked fairly.
+Methods, applied to the final ensemble score matrix S (recordings x candidates):
+  raw        current ranking, no correction
+  colnorm    THE PIPELINE'S METHOD (Config.colnorm): each candidate's scores z-scored with its
+             mean and spread over this subject's TRAINING recordings (in validation: the
+             fitting recordings only, never the hidden ones). Ranks one recording at a time.
+  col_test   for comparison only, NOT for submission: the same z-scoring, but with the mean and
+             spread taken over the other hidden/test recordings. Needs all test recordings at
+             once, so it does not fit the brief's "given an EEG recording" pipeline.
 
-RULES: col / rowcol / csls use all test recordings of a subject together (unsupervised, no
-labels). That is close to "unsupervised normalization of the test recordings" but not literally
-it, and it cannot rank a single recording, so ask the organisers before submitting with them.
-col_train uses only training recordings as the reference: safe to submit.
-
+Protocol = mindreading.model.validate: 15% of training videos hidden, 3 splits; no test data.
+Decision rule: keep colnorm only if it beats raw on EVERY split (for top-1 and/or top-5).
 Results go to results/colnorm.json.
 """
 import json
@@ -44,46 +35,17 @@ sys.path.insert(0, str(REPO))
 from mindreading import model as M  # noqa: E402
 from mindreading.config import RESULTS_DIR, SUBJECTS, check_data_dir  # noqa: E402
 
-
-# ---------------------------------------------------------------- the normalisations
-
-def _z(a, axis):
-    return (a - a.mean(axis, keepdims=True)) / (a.std(axis, keepdims=True) + 1e-8)
+METHODS = ("raw", "colnorm", "col_test")
 
 
-def col(S):
-    return _z(S, 0)
+def col_test(S):
+    return (S - S.mean(0, keepdims=True)) / (S.std(0, keepdims=True) + 1e-8)
 
-
-def rowcol(S, n=5):
-    for _ in range(n):
-        S = _z(_z(S, 0), 1)
-    return S
-
-
-def csls(S, k=10):
-    k = min(k, min(S.shape) - 1)
-    r = np.sort(S, 1)[:, -k:].mean(1, keepdims=True)    # how well each recording fits its best candidates
-    c = np.sort(S, 0)[-k:, :].mean(0, keepdims=True)    # how well each candidate fits its best recordings
-    return 2 * S - r - c
-
-
-def col_train(S, R):
-    """z-score each candidate column with its mean/std over the reference (training) recordings R."""
-    return (S - R.mean(0, keepdims=True)) / (R.std(0, keepdims=True) + 1e-8)
-
-
-# every method gets S (recordings x candidates) and R (training reference recordings x candidates)
-METHODS = {"none": lambda S, R: S, "col": lambda S, R: col(S), "rowcol": lambda S, R: rowcol(S),
-           "csls": lambda S, R: csls(S), "col_train": col_train}
-
-
-# ---------------------------------------------------------------- validation
 
 def main():
     check_data_dir()
     cfg = M.Config()
-    model = M.Model(cfg)                     # final model, final settings
+    model = M.Model(cfg)
     rows = []
     for seed in (0, 1, 2):
         t0 = time.time()
@@ -95,29 +57,32 @@ def main():
             ids, Y = model.train_eeg(s)
             msk = np.isin(ids, val_ids)
             cand = np.unique(ids[msk])
-            S = model.scores(members, Y[msk], cand)["ensemble"]
-            R = model.scores(members, Y[~msk], cand)["ensemble"]   # training recordings only
+            P = model.train_power(s)[msk] if cfg.power_weight else None
+            sc = model.ranked_scores(members, s, Y[msk], cand, P, fit_ids)
+            sc["col_test"] = col_test(sc["raw"])
             true_cols = np.searchsorted(cand, ids[msk])
-            for m, f in METHODS.items():
-                per[m].append(M.topk(f(S, R), true_cols))
+            for m in METHODS:
+                per[m].append(M.topk(sc[m], true_cols))
         for m in METHODS:
             r = {q: float(np.mean([x[q] for x in per[m]])) for q in ("top1", "top5", "median_rank")}
             rows.append({"method": m, "seed": seed, **r})
-            print(f"{m:7s} split {seed}: top-1 {r['top1']:5.1%}  top-5 {r['top5']:5.1%}  "
+            print(f"{m:8s} split {seed}: top-1 {r['top1']:5.1%}  top-5 {r['top5']:5.1%}  "
                   f"median {r['median_rank']:5.1f}", flush=True)
         print(f"  (split {seed} took {time.time() - t0:.0f} s)\n", flush=True)
 
     RESULTS_DIR.mkdir(exist_ok=True)
-    (RESULTS_DIR / "colnorm.json").write_text(json.dumps(rows, indent=1))
+    (RESULTS_DIR / "colnorm.json").write_text(json.dumps(
+        {"note": "full model incl. rhythm-power member; validate() protocol, 3 splits", "rows": rows}, indent=1))
 
-    base = {d["seed"]: d for d in rows if d["method"] == "none"}
-    print("method  | top-1 | top-5 | median | top-5 gain over 'none' per split")
+    base = {d["seed"]: d for d in rows if d["method"] == "raw"}
+    print("method   | top-1 | top-5 | median | top-1 gain per split | top-5 gain per split")
     for m in METHODS:
         ds = [d for d in rows if d["method"] == m]
         avg = {q: np.mean([d[q] for d in ds]) for q in ("top1", "top5", "median_rank")}
-        gains = " ".join(f"{100 * (d['top5'] - base[d['seed']]['top5']):+.1f}" for d in ds)
-        print(f"{m:7s} | {avg['top1']:5.1%} | {avg['top5']:5.1%} | {avg['median_rank']:6.1f} | {gains}")
-    print("\nA real improvement: positive gain on EVERY split, and more than ~0.5 points on average.")
+        g1 = " ".join(f"{100 * (d['top1'] - base[d['seed']]['top1']):+.1f}" for d in ds)
+        g5 = " ".join(f"{100 * (d['top5'] - base[d['seed']]['top5']):+.1f}" for d in ds)
+        print(f"{m:8s} | {avg['top1']:5.1%} | {avg['top5']:5.1%} | {avg['median_rank']:6.1f} | {g1:20s} | {g5}")
+    print("\nKeep colnorm only if its gains are positive on EVERY split (top-1 and/or top-5).")
 
 
 if __name__ == "__main__":
